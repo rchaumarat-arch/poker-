@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApp } from '../store/AppContext';
 import { Modal } from '../components/common/Modal';
@@ -73,6 +73,11 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
     participantIds.map((_, i) => (i === 0 ? 100 : 0))
   );
 
+  // Drag state
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
   // Sync if participants change (player added/removed)
   useEffect(() => {
     setRanked((prev) => {
@@ -81,10 +86,7 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
       participantIds.forEach((id) => { if (!filtered.includes(id)) filtered.push(id); });
       return filtered;
     });
-    setCustomPcts((prev) => {
-      const next = participantIds.map((_, i) => prev[i] ?? 0);
-      return next;
-    });
+    setCustomPcts((prev) => participantIds.map((_, i) => prev[i] ?? 0));
   }, [participantIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const moveUp = (i: number) => {
@@ -96,6 +98,41 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
     setRanked((prev) => { const a = [...prev]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; return a; });
   };
 
+  // Drag handlers (pointer events — works on mouse + touch)
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, i: number) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragIndex(i);
+    setDragOverIndex(i);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragIndex === null || !listRef.current) return;
+    const items = Array.from(listRef.current.children) as HTMLElement[];
+    const y = e.clientY;
+    // Find the item whose center is closest to the pointer
+    let closest = dragOverIndex ?? dragIndex;
+    let closestDist = Infinity;
+    items.forEach((el, j) => {
+      const rect = el.getBoundingClientRect();
+      const dist = Math.abs(y - (rect.top + rect.height / 2));
+      if (dist < closestDist) { closestDist = dist; closest = j; }
+    });
+    if (closest !== dragOverIndex) setDragOverIndex(closest);
+  };
+
+  const commitDrag = () => {
+    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+      setRanked((prev) => {
+        const a = [...prev];
+        const [item] = a.splice(dragIndex, 1);
+        a.splice(dragOverIndex, 0, item);
+        return a;
+      });
+    }
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
   const activePercents =
     rule === 'custom'
       ? customPcts
@@ -104,7 +141,6 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
   const preview = computeDistribution(ranked, totalPot, activePercents);
 
   const RANK_LABELS = ['🥇', '🥈', '🥉'];
-
   const customTotal = customPcts.reduce((s, p) => s + p, 0);
   const customOk = Math.abs(customTotal - 100) < 0.05;
 
@@ -115,31 +151,54 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Left — Ranking */}
         <div>
-          <p className="text-xs text-slate-400 mb-2">Classement (1er → dernier)</p>
-          <div className="space-y-1.5">
+          <p className="text-xs text-slate-400 mb-2">
+            Classement — glisser{' '}
+            <span className="text-slate-600">ou utiliser ↑↓</span>
+          </p>
+          <div className="space-y-1.5" ref={listRef}>
             {ranked.map((playerId, i) => {
               const player = players[playerId];
               if (!player) return null;
               const rankLabel = RANK_LABELS[i] ?? `${i + 1}.`;
+              const isDragged = dragIndex === i;
+              const isTarget = dragOverIndex === i && dragIndex !== null && dragIndex !== i;
               return (
                 <div
                   key={playerId}
-                  className="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2"
+                  className={[
+                    'flex items-center gap-2 rounded-xl px-2 py-2 transition-all select-none',
+                    isDragged ? 'opacity-40 scale-95 bg-slate-700' : 'bg-slate-800',
+                    isTarget ? 'ring-2 ring-emerald-500 bg-slate-700' : '',
+                  ].join(' ')}
                 >
-                  <span className="text-sm w-6 text-center leading-none">{rankLabel}</span>
+                  {/* Drag handle */}
+                  <div
+                    className="touch-none cursor-grab active:cursor-grabbing w-5 h-6 flex items-center justify-center text-slate-500 hover:text-slate-300 flex-shrink-0"
+                    onPointerDown={(e) => handlePointerDown(e, i)}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={commitDrag}
+                    onPointerCancel={commitDrag}
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 10 16" fill="currentColor">
+                      <circle cx="2.5" cy="2" r="1.5" /><circle cx="7.5" cy="2" r="1.5" />
+                      <circle cx="2.5" cy="8" r="1.5" /><circle cx="7.5" cy="8" r="1.5" />
+                      <circle cx="2.5" cy="14" r="1.5" /><circle cx="7.5" cy="14" r="1.5" />
+                    </svg>
+                  </div>
+                  <span className="text-sm w-6 text-center leading-none flex-shrink-0">{rankLabel}</span>
                   <span className="flex-1 text-sm text-white truncate">{player.name}</span>
-                  <div className="flex gap-0.5">
+                  <div className="flex gap-0.5 flex-shrink-0">
                     <button
                       onClick={() => moveUp(i)}
                       disabled={i === 0}
-                      className="w-6 h-6 rounded text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-25 disabled:cursor-not-allowed text-sm flex items-center justify-center transition-colors"
+                      className="w-6 h-6 rounded text-slate-500 hover:text-white hover:bg-slate-700 disabled:opacity-20 disabled:cursor-not-allowed text-sm flex items-center justify-center transition-colors"
                     >
                       ↑
                     </button>
                     <button
                       onClick={() => moveDown(i)}
                       disabled={i === ranked.length - 1}
-                      className="w-6 h-6 rounded text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-25 disabled:cursor-not-allowed text-sm flex items-center justify-center transition-colors"
+                      className="w-6 h-6 rounded text-slate-500 hover:text-white hover:bg-slate-700 disabled:opacity-20 disabled:cursor-not-allowed text-sm flex items-center justify-center transition-colors"
                     >
                       ↓
                     </button>

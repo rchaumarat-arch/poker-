@@ -73,6 +73,7 @@ export default function GroupPage() {
   const [gameInitialBuyIn, setGameInitialBuyIn] = useState('50');
   const [selectedPlayers, setSelectedPlayers] = useState<Set<string>>(new Set());
   const [editGameId, setEditGameId] = useState<string | null>(null);
+  const [updateExistingBuyIn, setUpdateExistingBuyIn] = useState(false);
 
   // Delete game
   const [deleteGameId, setDeleteGameId] = useState<string | null>(null);
@@ -115,16 +116,21 @@ export default function GroupPage() {
     setGameInitialBuyIn('50');
     setSelectedPlayers(new Set(group.memberIds));
     setEditGameId(null);
+    setUpdateExistingBuyIn(false);
     setGameModal(true);
   };
 
   const openEditGame = (gid: string) => {
     const g = state.games[gid];
+    // Pre-fill buy-in from existing participants (take the most common value)
+    const existingBuyIns = Object.values(g.participants).map((p) => p.initialBuyIn);
+    const defaultBuyIn = existingBuyIns.length > 0 ? String(existingBuyIns[0]) : '50';
     setGameName(g.name);
     setGameDate(g.date);
     setEditGameId(gid);
-    setGameInitialBuyIn('50');
+    setGameInitialBuyIn(defaultBuyIn);
     setSelectedPlayers(new Set(Object.keys(g.participants)));
+    setUpdateExistingBuyIn(false);
     setGameModal(true);
   };
 
@@ -137,11 +143,23 @@ export default function GroupPage() {
       dispatch({ type: 'UPDATE_GAME', payload: { id: editGameId, name, date: gameDate } });
       const currentGame = state.games[editGameId];
       const currentIds = new Set(Object.keys(currentGame.participants));
+
+      // Update buy-in of existing participants if requested
+      if (updateExistingBuyIn) {
+        for (const playerId of currentIds) {
+          if (selectedPlayers.has(playerId)) {
+            dispatch({ type: 'UPDATE_BUYIN', payload: { gameId: editGameId, playerId, amount: buyIn } });
+          }
+        }
+      }
+
+      // Add new participants
       for (const playerId of selectedPlayers) {
         if (!currentIds.has(playerId)) {
           dispatch({ type: 'ADD_PARTICIPANT', payload: { gameId: editGameId, playerId, initialBuyIn: buyIn } });
         }
       }
+      // Remove deselected participants
       for (const playerId of currentIds) {
         if (!selectedPlayers.has(playerId)) {
           dispatch({ type: 'REMOVE_PARTICIPANT', payload: { gameId: editGameId, playerId } });
@@ -605,11 +623,24 @@ export default function GroupPage() {
             onChange={(e) => setGameDate(e.target.value)}
           />
           <CurrencyInput
-            label={editGameId ? 'Mise par défaut (nouveaux joueurs)' : 'Mise initiale par joueur'}
+            label={editGameId ? 'Mise initiale' : 'Mise initiale par joueur'}
             value={gameInitialBuyIn}
             onChange={setGameInitialBuyIn}
             placeholder="50"
           />
+          {editGameId && (
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={updateExistingBuyIn}
+                onChange={(e) => setUpdateExistingBuyIn(e.target.checked)}
+                className="w-4 h-4 accent-emerald-500 flex-shrink-0"
+              />
+              <span className="text-sm text-slate-300 group-hover:text-white transition-colors">
+                Mettre à jour la mise de tous les joueurs existants
+              </span>
+            </label>
+          )}
           <div>
             <p className="text-sm font-medium text-slate-300 mb-2">
               Joueurs participants
