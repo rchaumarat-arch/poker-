@@ -73,12 +73,20 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
     participantIds.map((_, i) => (i === 0 ? 100 : 0))
   );
 
-  // Drag state
+  // Drag: React state only for what needs a re-render (dragIndex, dropIndex visibility)
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
+  // Ref stores mutable drag data without triggering re-renders (for smooth position tracking)
+  const dragData = useRef<{
+    startPointerY: number;
+    startGhostTop: number;
+    fromIndex: number;
+    currentDrop: number;
+  } | null>(null);
 
-  // Sync if participants change (player added/removed)
+  // Sync if participants change
   useEffect(() => {
     setRanked((prev) => {
       const ids = new Set(participantIds);
@@ -98,39 +106,72 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
     setRanked((prev) => { const a = [...prev]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; return a; });
   };
 
-  // Drag handlers (pointer events — works on mouse + touch)
+  // ---- Drag handlers ----
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, i: number) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Don't start drag on button clicks
+    if ((e.target as HTMLElement).closest('button')) return;
+    const row = e.currentTarget;
+    const rect = row.getBoundingClientRect();
+    row.setPointerCapture(e.pointerId);
+
+    dragData.current = {
+      startPointerY: e.clientY,
+      startGhostTop: rect.top,
+      fromIndex: i,
+      currentDrop: i,
+    };
+
+    if (ghostRef.current) {
+      ghostRef.current.style.top = `${rect.top}px`;
+      ghostRef.current.style.left = `${rect.left}px`;
+      ghostRef.current.style.width = `${rect.width}px`;
+      ghostRef.current.style.display = 'flex';
+    }
+
     setDragIndex(i);
-    setDragOverIndex(i);
+    setDropIndex(i);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (dragIndex === null || !listRef.current) return;
+    if (!dragData.current || !listRef.current || !ghostRef.current) return;
+
+    // Update ghost position imperatively — no re-render, stays at 60fps
+    const delta = e.clientY - dragData.current.startPointerY;
+    ghostRef.current.style.top = `${dragData.current.startGhostTop + delta}px`;
+
+    // Find closest item to pointer
     const items = Array.from(listRef.current.children) as HTMLElement[];
-    const y = e.clientY;
-    // Find the item whose center is closest to the pointer
-    let closest = dragOverIndex ?? dragIndex;
+    let closest = dragData.current.fromIndex;
     let closestDist = Infinity;
     items.forEach((el, j) => {
-      const rect = el.getBoundingClientRect();
-      const dist = Math.abs(y - (rect.top + rect.height / 2));
+      const r = el.getBoundingClientRect();
+      const dist = Math.abs(e.clientY - (r.top + r.height / 2));
       if (dist < closestDist) { closestDist = dist; closest = j; }
     });
-    if (closest !== dragOverIndex) setDragOverIndex(closest);
+
+    // Trigger re-render only when target slot changes
+    if (closest !== dragData.current.currentDrop) {
+      dragData.current.currentDrop = closest;
+      setDropIndex(closest);
+    }
   };
 
   const commitDrag = () => {
-    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
-      setRanked((prev) => {
-        const a = [...prev];
-        const [item] = a.splice(dragIndex, 1);
-        a.splice(dragOverIndex, 0, item);
-        return a;
-      });
+    if (ghostRef.current) ghostRef.current.style.display = 'none';
+    if (dragData.current) {
+      const { fromIndex, currentDrop } = dragData.current;
+      if (fromIndex !== currentDrop) {
+        setRanked((prev) => {
+          const a = [...prev];
+          const [item] = a.splice(fromIndex, 1);
+          a.splice(currentDrop, 0, item);
+          return a;
+        });
+      }
     }
+    dragData.current = null;
     setDragIndex(null);
-    setDragOverIndex(null);
+    setDropIndex(null);
   };
 
   const activePercents =
@@ -139,10 +180,12 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
       : (DIST_RULES.find((r) => r.value === rule)?.percents ?? [100]);
 
   const preview = computeDistribution(ranked, totalPot, activePercents);
-
   const RANK_LABELS = ['🥇', '🥈', '🥉'];
   const customTotal = customPcts.reduce((s, p) => s + p, 0);
   const customOk = Math.abs(customTotal - 100) < 0.05;
+
+  const ghostPlayer = dragIndex !== null ? players[ranked[dragIndex]] : null;
+  const ghostLabel = dragIndex !== null ? (RANK_LABELS[dragIndex] ?? `${dragIndex + 1}.`) : '';
 
   return (
     <div className="bg-slate-900 border border-emerald-500/25 rounded-2xl p-4 space-y-4">
@@ -152,52 +195,56 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
         {/* Left — Ranking */}
         <div>
           <p className="text-xs text-slate-400 mb-2">
-            Classement — glisser{' '}
-            <span className="text-slate-600">ou utiliser ↑↓</span>
+            Classement{' '}
+            <span className="text-slate-600">— glisser ou ↑↓</span>
           </p>
           <div className="space-y-1.5" ref={listRef}>
             {ranked.map((playerId, i) => {
               const player = players[playerId];
               if (!player) return null;
               const rankLabel = RANK_LABELS[i] ?? `${i + 1}.`;
-              const isDragged = dragIndex === i;
-              const isTarget = dragOverIndex === i && dragIndex !== null && dragIndex !== i;
+              const isBeingDragged = dragIndex === i;
+              const isDropTarget = dropIndex === i && dragIndex !== null && dragIndex !== i;
+
               return (
                 <div
                   key={playerId}
                   className={[
-                    'flex items-center gap-2 rounded-xl px-2 py-2 transition-all select-none',
-                    isDragged ? 'opacity-40 scale-95 bg-slate-700' : 'bg-slate-800',
-                    isTarget ? 'ring-2 ring-emerald-500 bg-slate-700' : '',
+                    'flex items-center gap-2 rounded-xl px-3 py-2.5 select-none transition-all duration-100',
+                    // Dragged slot: invisible placeholder so layout is preserved
+                    isBeingDragged
+                      ? 'opacity-0 pointer-events-none'
+                      : 'cursor-grab active:cursor-grabbing',
+                    // Drop target: visual highlight
+                    isDropTarget
+                      ? 'bg-slate-700 ring-2 ring-emerald-500 scale-[1.02]'
+                      : 'bg-slate-800 hover:bg-slate-750',
                   ].join(' ')}
+                  onPointerDown={(e) => handlePointerDown(e, i)}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={commitDrag}
+                  onPointerCancel={commitDrag}
+                  style={{ touchAction: 'none' }}
                 >
-                  {/* Drag handle */}
-                  <div
-                    className="touch-none cursor-grab active:cursor-grabbing w-5 h-6 flex items-center justify-center text-slate-500 hover:text-slate-300 flex-shrink-0"
-                    onPointerDown={(e) => handlePointerDown(e, i)}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={commitDrag}
-                    onPointerCancel={commitDrag}
-                  >
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 10 16" fill="currentColor">
-                      <circle cx="2.5" cy="2" r="1.5" /><circle cx="7.5" cy="2" r="1.5" />
-                      <circle cx="2.5" cy="8" r="1.5" /><circle cx="7.5" cy="8" r="1.5" />
-                      <circle cx="2.5" cy="14" r="1.5" /><circle cx="7.5" cy="14" r="1.5" />
-                    </svg>
-                  </div>
-                  <span className="text-sm w-6 text-center leading-none flex-shrink-0">{rankLabel}</span>
-                  <span className="flex-1 text-sm text-white truncate">{player.name}</span>
+                  <span className="text-sm w-6 text-center leading-none flex-shrink-0 pointer-events-none">
+                    {rankLabel}
+                  </span>
+                  <span className="flex-1 text-sm text-white truncate pointer-events-none">
+                    {player.name}
+                  </span>
                   <div className="flex gap-0.5 flex-shrink-0">
                     <button
+                      onPointerDown={(e) => e.stopPropagation()}
                       onClick={() => moveUp(i)}
-                      disabled={i === 0}
+                      disabled={i === 0 || dragIndex !== null}
                       className="w-6 h-6 rounded text-slate-500 hover:text-white hover:bg-slate-700 disabled:opacity-20 disabled:cursor-not-allowed text-sm flex items-center justify-center transition-colors"
                     >
                       ↑
                     </button>
                     <button
+                      onPointerDown={(e) => e.stopPropagation()}
                       onClick={() => moveDown(i)}
-                      disabled={i === ranked.length - 1}
+                      disabled={i === ranked.length - 1 || dragIndex !== null}
                       className="w-6 h-6 rounded text-slate-500 hover:text-white hover:bg-slate-700 disabled:opacity-20 disabled:cursor-not-allowed text-sm flex items-center justify-center transition-colors"
                     >
                       ↓
@@ -292,6 +339,20 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
       >
         Appliquer les montants
       </Button>
+
+      {/* Ghost: follows cursor during drag — position updated imperatively for 60fps smoothness */}
+      <div
+        ref={ghostRef}
+        style={{ display: 'none', position: 'fixed', zIndex: 9999, pointerEvents: 'none' }}
+        className="items-center gap-2 rounded-xl px-3 py-2.5 bg-slate-600 shadow-2xl shadow-black/70 ring-2 ring-emerald-400"
+      >
+        <span className="text-sm w-6 text-center leading-none flex-shrink-0 text-slate-200">
+          {ghostLabel}
+        </span>
+        <span className="flex-1 text-sm text-white font-semibold truncate">
+          {ghostPlayer?.name ?? ''}
+        </span>
+      </div>
     </div>
   );
 }
