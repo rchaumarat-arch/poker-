@@ -135,6 +135,18 @@ export default function GroupPage() {
 
     if (editGameId) {
       dispatch({ type: 'UPDATE_GAME', payload: { id: editGameId, name, date: gameDate } });
+      const currentGame = state.games[editGameId];
+      const currentIds = new Set(Object.keys(currentGame.participants));
+      for (const playerId of selectedPlayers) {
+        if (!currentIds.has(playerId)) {
+          dispatch({ type: 'ADD_PARTICIPANT', payload: { gameId: editGameId, playerId, initialBuyIn: buyIn } });
+        }
+      }
+      for (const playerId of currentIds) {
+        if (!selectedPlayers.has(playerId)) {
+          dispatch({ type: 'REMOVE_PARTICIPANT', payload: { gameId: editGameId, playerId } });
+        }
+      }
     } else {
       dispatch({
         type: 'ADD_GAME',
@@ -592,14 +604,12 @@ export default function GroupPage() {
             value={gameDate}
             onChange={(e) => setGameDate(e.target.value)}
           />
-          {!editGameId && (
-            <CurrencyInput
-              label="Mise initiale par joueur"
-              value={gameInitialBuyIn}
-              onChange={setGameInitialBuyIn}
-              placeholder="50"
-            />
-          )}
+          <CurrencyInput
+            label={editGameId ? 'Mise par défaut (nouveaux joueurs)' : 'Mise initiale par joueur'}
+            value={gameInitialBuyIn}
+            onChange={setGameInitialBuyIn}
+            placeholder="50"
+          />
           <div>
             <p className="text-sm font-medium text-slate-300 mb-2">
               Joueurs participants

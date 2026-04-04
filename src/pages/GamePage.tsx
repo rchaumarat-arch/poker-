@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useApp } from '../store/AppContext';
 import { Modal } from '../components/common/Modal';
@@ -20,7 +20,222 @@ import {
   formatDate,
   formatBalanceSign,
 } from '../utils/formatters';
-import { GameParticipant } from '../types';
+import { GameParticipant, Player } from '../types';
+
+// ---- Distribution ----
+type DistributionRule =
+  | 'winner_takes_all'
+  | 'top2_equal'
+  | 'top2_6040'
+  | 'top3_equal'
+  | 'top3_50_30_20'
+  | 'custom';
+
+const DIST_RULES: { value: DistributionRule; label: string; percents: number[] }[] = [
+  { value: 'winner_takes_all', label: '1er prend tout (100%)', percents: [100] },
+  { value: 'top2_equal', label: 'Top 2 — égalité (50/50)', percents: [50, 50] },
+  { value: 'top2_6040', label: 'Top 2 — 60% / 40%', percents: [60, 40] },
+  { value: 'top3_equal', label: 'Top 3 — égalité', percents: [33.34, 33.33, 33.33] },
+  { value: 'top3_50_30_20', label: 'Top 3 — 50% / 30% / 20%', percents: [50, 30, 20] },
+  { value: 'custom', label: 'Personnalisé (%)', percents: [] },
+];
+
+function computeDistribution(
+  orderedIds: string[],
+  totalPot: number,
+  percents: number[]
+): Record<string, number> {
+  const amounts: Record<string, number> = {};
+  orderedIds.forEach((id, i) => {
+    const pct = i < percents.length ? percents[i] : 0;
+    amounts[id] = Math.round((totalPot * pct) / 100 * 100) / 100;
+  });
+  // Fix rounding: remainder goes to 1st place
+  const distributed = Object.values(amounts).reduce((s, a) => s + a, 0);
+  const diff = Math.round((totalPot - distributed) * 100) / 100;
+  if (orderedIds.length > 0) {
+    amounts[orderedIds[0]] = Math.round(((amounts[orderedIds[0]] ?? 0) + diff) * 100) / 100;
+  }
+  return amounts;
+}
+
+interface DistributionPanelProps {
+  participantIds: string[];
+  players: Record<string, Player>;
+  totalPot: number;
+  onApply: (amounts: Record<string, number>) => void;
+}
+
+function DistributionPanel({ participantIds, players, totalPot, onApply }: DistributionPanelProps) {
+  const [ranked, setRanked] = useState<string[]>([...participantIds]);
+  const [rule, setRule] = useState<DistributionRule>('winner_takes_all');
+  const [customPcts, setCustomPcts] = useState<number[]>(() =>
+    participantIds.map((_, i) => (i === 0 ? 100 : 0))
+  );
+
+  // Sync if participants change (player added/removed)
+  useEffect(() => {
+    setRanked((prev) => {
+      const ids = new Set(participantIds);
+      const filtered = prev.filter((id) => ids.has(id));
+      participantIds.forEach((id) => { if (!filtered.includes(id)) filtered.push(id); });
+      return filtered;
+    });
+    setCustomPcts((prev) => {
+      const next = participantIds.map((_, i) => prev[i] ?? 0);
+      return next;
+    });
+  }, [participantIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const moveUp = (i: number) => {
+    if (i === 0) return;
+    setRanked((prev) => { const a = [...prev]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; return a; });
+  };
+  const moveDown = (i: number) => {
+    if (i === ranked.length - 1) return;
+    setRanked((prev) => { const a = [...prev]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; return a; });
+  };
+
+  const activePercents =
+    rule === 'custom'
+      ? customPcts
+      : (DIST_RULES.find((r) => r.value === rule)?.percents ?? [100]);
+
+  const preview = computeDistribution(ranked, totalPot, activePercents);
+
+  const RANK_LABELS = ['🥇', '🥈', '🥉'];
+
+  const customTotal = customPcts.reduce((s, p) => s + p, 0);
+  const customOk = Math.abs(customTotal - 100) < 0.05;
+
+  return (
+    <div className="bg-slate-900 border border-emerald-500/25 rounded-2xl p-4 space-y-4">
+      <p className="text-sm font-semibold text-white">Distribution automatique</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Left — Ranking */}
+        <div>
+          <p className="text-xs text-slate-400 mb-2">Classement (1er → dernier)</p>
+          <div className="space-y-1.5">
+            {ranked.map((playerId, i) => {
+              const player = players[playerId];
+              if (!player) return null;
+              const rankLabel = RANK_LABELS[i] ?? `${i + 1}.`;
+              return (
+                <div
+                  key={playerId}
+                  className="flex items-center gap-2 bg-slate-800 rounded-xl px-3 py-2"
+                >
+                  <span className="text-sm w-6 text-center leading-none">{rankLabel}</span>
+                  <span className="flex-1 text-sm text-white truncate">{player.name}</span>
+                  <div className="flex gap-0.5">
+                    <button
+                      onClick={() => moveUp(i)}
+                      disabled={i === 0}
+                      className="w-6 h-6 rounded text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-25 disabled:cursor-not-allowed text-sm flex items-center justify-center transition-colors"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => moveDown(i)}
+                      disabled={i === ranked.length - 1}
+                      className="w-6 h-6 rounded text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-25 disabled:cursor-not-allowed text-sm flex items-center justify-center transition-colors"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right — Rule + Preview */}
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs text-slate-400 mb-2">Règle de distribution</p>
+            <select
+              value={rule}
+              onChange={(e) => setRule(e.target.value as DistributionRule)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl text-white text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer"
+            >
+              {DIST_RULES.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {rule === 'custom' && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-slate-400">Pourcentage par place</p>
+              {ranked.map((playerId, i) => {
+                const player = players[playerId];
+                if (!player) return null;
+                return (
+                  <div key={playerId} className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400 w-14 truncate">{player.name}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={customPcts[i] ?? 0}
+                      onChange={(e) => {
+                        const next = [...customPcts];
+                        next[i] = parseFloat(e.target.value) || 0;
+                        setCustomPcts(next);
+                      }}
+                      className="w-16 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <span className="text-xs text-slate-500">%</span>
+                  </div>
+                );
+              })}
+              <p className={`text-xs font-medium ${customOk ? 'text-emerald-400' : 'text-amber-400'}`}>
+                Total : {Math.round(customTotal * 100) / 100}%
+                {!customOk && ' ≠ 100%'}
+              </p>
+            </div>
+          )}
+
+          <div>
+            <p className="text-xs text-slate-400 mb-2">Aperçu</p>
+            <div className="space-y-1">
+              {ranked.map((playerId) => {
+                const player = players[playerId];
+                if (!player) return null;
+                const amount = preview[playerId] ?? 0;
+                return (
+                  <div key={playerId} className="flex items-center justify-between">
+                    <span className="text-xs text-slate-300">{player.name}</span>
+                    <span
+                      className={`text-xs font-mono font-semibold ${
+                        amount > 0 ? 'text-emerald-400' : 'text-slate-500'
+                      }`}
+                    >
+                      {formatCurrencyCompact(amount)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Button
+        variant="primary"
+        fullWidth
+        onClick={() => onApply(preview)}
+        disabled={rule === 'custom' && !customOk}
+      >
+        Appliquer les montants
+      </Button>
+    </div>
+  );
+}
 
 // ---- Icons ----
 const PlusIcon = () => (
@@ -369,6 +584,7 @@ export default function GamePage() {
   const { state, dispatch } = useApp();
 
   const [showFinalAmounts, setShowFinalAmounts] = useState(false);
+  const [showDistPanel, setShowDistPanel] = useState(false);
   const [addPlayerModal, setAddPlayerModal] = useState(false);
   const [addPlayerBuyIn, setAddPlayerBuyIn] = useState('50');
   const [selectedNewPlayer, setSelectedNewPlayer] = useState('');
@@ -435,7 +651,15 @@ export default function GamePage() {
 
   const handleReset = () => {
     dispatch({ type: 'RESET_GAME_RESULTS', payload: { id: currentGameId } });
+    setShowDistPanel(false);
     setConfirmReset(false);
+  };
+
+  const handleApplyDistribution = (amounts: Record<string, number>) => {
+    Object.entries(amounts).forEach(([playerId, amount]) => {
+      dispatch({ type: 'SET_FINAL_AMOUNT', payload: { gameId: currentGameId, playerId, amount } });
+    });
+    setShowDistPanel(false);
   };
 
   const sortedParticipants = [...participants].sort((a, b) => {
@@ -536,10 +760,23 @@ export default function GamePage() {
           <Button
             variant={showFinalAmounts ? 'primary' : 'secondary'}
             size="sm"
-            onClick={() => setShowFinalAmounts(!showFinalAmounts)}
+            onClick={() => {
+              const next = !showFinalAmounts;
+              setShowFinalAmounts(next);
+              if (!next) setShowDistPanel(false);
+            }}
           >
             {showFinalAmounts ? '✓ Saisie des résultats' : 'Saisir les résultats'}
           </Button>
+          {showFinalAmounts && (
+            <Button
+              variant={showDistPanel ? 'success' : 'ghost'}
+              size="sm"
+              onClick={() => setShowDistPanel(!showDistPanel)}
+            >
+              {showDistPanel ? '✕ Distribution' : '⚡ Distribution auto'}
+            </Button>
+          )}
           {showFinalAmounts && allFinalsFilled && balanced && (
             <Button
               variant="success"
@@ -574,6 +811,16 @@ export default function GamePage() {
         </div>
       )}
 
+      {/* Distribution Panel */}
+      {showFinalAmounts && !isFinished && showDistPanel && (
+        <DistributionPanel
+          participantIds={sortedParticipants.map((p) => p.playerId)}
+          players={state.players}
+          totalPot={totalInvested}
+          onApply={handleApplyDistribution}
+        />
+      )}
+
       {/* Participant Cards */}
       {participants.length === 0 ? (
         <div className="text-center py-10 space-y-3">
@@ -595,7 +842,7 @@ export default function GamePage() {
             if (!player) return null;
             return (
               <ParticipantCard
-                key={participant.playerId}
+                key={`${participant.playerId}-${participant.finalAmount ?? 'null'}`}
                 participant={participant}
                 playerName={player.name}
                 gameId={game.id}
