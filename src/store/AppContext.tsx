@@ -8,6 +8,8 @@ import React, {
 import { AppState, GameParticipant } from '../types';
 import { createDemoData } from '../utils/demoData';
 import { generateId } from '../utils/formatters';
+import { fetchPlayers, upsertPlayers } from '../lib/playersApi';
+import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'poker-tracker-v1';
 
@@ -86,7 +88,8 @@ type Action =
     }
   | { type: 'DELETE_SETTLEMENT'; payload: { id: string } }
   | { type: 'IMPORT_STATE'; payload: AppState }
-  | { type: 'LOAD_DEMO' };
+  | { type: 'LOAD_DEMO' }
+  | { type: 'SYNC_PLAYERS'; payload: AppState['players'] };
 
 function clone<T>(val: T): T {
   return JSON.parse(JSON.stringify(val)) as T;
@@ -366,6 +369,10 @@ function reducer(state: AppState, action: Action): AppState {
       return createDemoData();
     }
 
+    case 'SYNC_PLAYERS': {
+      return { ...state, players: action.payload };
+    }
+
     default:
       return state;
   }
@@ -382,6 +389,37 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
+  const { user } = useAuth();
+
+  // Sync players depuis Supabase au montage (une seule fois par session)
+  useEffect(() => {
+    if (!user) return;
+
+    (async () => {
+      const remote = await fetchPlayers();
+
+      if (remote === null) {
+        // Erreur réseau → localStorage reste source de vérité, rien à faire
+        return;
+      }
+
+      if (remote.length === 0) {
+        // Supabase vide → migration one-shot : on pousse les players localStorage
+        const localPlayers = Object.values(state.players);
+        if (localPlayers.length > 0) {
+          await upsertPlayers(localPlayers, user.id);
+        }
+        // state.players déjà correct, pas besoin de dispatcher
+        return;
+      }
+
+      // Supabase a des données → il fait autorité
+      const playersById: AppState['players'] = {};
+      remote.forEach((p) => { playersById[p.id] = p; });
+      dispatch({ type: 'SYNC_PLAYERS', payload: playersById });
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   useEffect(() => {
     try {
