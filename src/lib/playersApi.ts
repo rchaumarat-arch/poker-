@@ -33,3 +33,29 @@ export async function upsertPlayers(players: Player[], userId: string): Promise<
   const { error } = await supabase.from('players').upsert(rows);
   return !error;
 }
+
+export async function upsertPlayer(player: Player, userId: string): Promise<boolean> {
+  const { error } = await supabase.from('players').upsert({
+    id: player.id,
+    user_id: userId,
+    name: player.name,
+    created_at: player.createdAt,
+  });
+  return !error;
+}
+
+export async function updatePlayer(id: string, name: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('players')
+    .update({ name })
+    .eq('id', id);
+  return !error;
+}
+
+export async function deletePlayer(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('players')
+    .delete()
+    .eq('id', id);
+  return !error;
+}

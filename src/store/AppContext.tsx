@@ -8,7 +8,7 @@ import React, {
 import { AppState, GameParticipant } from '../types';
 import { createDemoData } from '../utils/demoData';
 import { generateId } from '../utils/formatters';
-import { fetchPlayers, upsertPlayers } from '../lib/playersApi';
+import { fetchPlayers, upsertPlayers, upsertPlayer, updatePlayer, deletePlayer } from '../lib/playersApi';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'poker-tracker-v1';
@@ -24,7 +24,7 @@ function loadState(): AppState {
 }
 
 type Action =
-  | { type: 'ADD_PLAYER'; payload: { name: string } }
+  | { type: 'ADD_PLAYER'; payload: { name: string; id?: string; createdAt?: string } }
   | { type: 'UPDATE_PLAYER'; payload: { id: string; name: string } }
   | { type: 'DELETE_PLAYER'; payload: { id: string } }
   | { type: 'ADD_GROUP'; payload: { name: string; memberIds: string[] } }
@@ -98,12 +98,13 @@ function clone<T>(val: T): T {
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'ADD_PLAYER': {
-      const id = generateId();
+      const id = action.payload.id ?? generateId();
+      const createdAt = action.payload.createdAt ?? new Date().toISOString();
       return {
         ...state,
         players: {
           ...state.players,
-          [id]: { id, name: action.payload.name, createdAt: new Date().toISOString() },
+          [id]: { id, name: action.payload.name, createdAt },
         },
       };
     }
@@ -380,7 +381,7 @@ function reducer(state: AppState, action: Action): AppState {
 
 interface AppContextValue {
   state: AppState;
-  dispatch: React.Dispatch<Action>;
+  dispatch: (action: Action) => void;
   exportData: () => void;
   importData: (file: File) => Promise<void>;
 }
@@ -429,6 +430,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state]);
 
+  // Wrapper optimistic : dispatch local immédiat, sync Supabase en arrière-plan
+  const dispatchWithSync = useCallback((action: Action) => {
+    if (!user) {
+      dispatch(action);
+      return;
+    }
+
+    if (action.type === 'ADD_PLAYER') {
+      // Pré-générer id + createdAt pour pouvoir les passer à Supabase immédiatement
+      const id = action.payload.id ?? generateId();
+      const createdAt = action.payload.createdAt ?? new Date().toISOString();
+      const enriched: Action = { type: 'ADD_PLAYER', payload: { ...action.payload, id, createdAt } };
+      dispatch(enriched);
+      upsertPlayer({ id, name: action.payload.name, createdAt }, user.id);
+    } else if (action.type === 'UPDATE_PLAYER') {
+      dispatch(action);
+      updatePlayer(action.payload.id, action.payload.name);
+    } else if (action.type === 'DELETE_PLAYER') {
+      dispatch(action);
+      deletePlayer(action.payload.id);
+    } else {
+      dispatch(action);
+    }
+  }, [user]);
+
   const exportData = useCallback(() => {
     const json = JSON.stringify(state, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
@@ -447,7 +473,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AppContext.Provider value={{ state, dispatch, exportData, importData }}>
+    <AppContext.Provider value={{ state, dispatch: dispatchWithSync, exportData, importData }}>
       {children}
     </AppContext.Provider>
   );
