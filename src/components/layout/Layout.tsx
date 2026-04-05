@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../store/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -8,6 +9,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const { user, signOut } = useAuth();
 
   return (
     <div className="min-h-screen" style={{ color: 'var(--text-warm)' }}>
@@ -48,14 +50,25 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </Link>
 
-          {/* Right accent */}
-          {isHome && (
-            <div className="hidden sm:flex items-center gap-2">
-              <span style={{ color: 'var(--gold)', opacity: 0.25, fontSize: '1.2rem', letterSpacing: '0.25rem' }}>
-                ♦ ♣
+          {/* Right: user + sign out */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {user && (
+              <span className="hidden sm:block text-xs truncate max-w-[140px]" style={{ color: 'var(--text-muted)' }}>
+                {user.email}
               </span>
-            </div>
-          )}
+            )}
+            <button
+              onClick={() => signOut()}
+              className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+              style={{
+                color: 'var(--text-muted)',
+                border: '1px solid rgba(201,160,48,0.18)',
+                background: 'rgba(201,160,48,0.06)',
+              }}
+            >
+              Se déconnecter
+            </button>
+          </div>
         </div>
 
         {/* Gold accent line at bottom */}
