@@ -16,6 +16,7 @@ export function Input({
   prefix,
   className = '',
   id,
+  style,
   ...props
 }: InputProps) {
   const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
@@ -23,37 +24,35 @@ export function Input({
   return (
     <div className="space-y-1.5">
       {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-slate-300">
+        <label htmlFor={inputId} className="block text-sm font-medium" style={{ color: '#b8c8c0' }}>
           {label}
         </label>
       )}
       <div className="relative flex items-center">
         {prefix && (
-          <span className="absolute left-3 text-slate-400 text-sm select-none">{prefix}</span>
+          <span className="absolute left-3 text-sm select-none" style={{ color: 'var(--text-muted)' }}>
+            {prefix}
+          </span>
         )}
         <input
           id={inputId}
-          className={`
-            w-full rounded-xl text-white placeholder-slate-500
-            focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent
-            transition-colors text-sm
-            ${prefix ? 'pl-8' : 'pl-3.5'}
-            ${suffix ? 'pr-10' : 'pr-3.5'}
-            py-2.5
-            ${className}
-          `}
+          className={`input-poker ${prefix ? 'pl-8' : ''} ${suffix ? 'pr-10' : ''} ${
+            error ? 'border-red-500/60' : ''
+          } ${className}`}
           style={{
-            background: '#0e2018',
-            border: error ? '1px solid rgb(239,68,68)' : '1px solid rgba(201,144,48,0.2)',
+            borderColor: error ? 'rgba(239,68,68,0.5)' : undefined,
+            ...style,
           }}
           {...props}
         />
         {suffix && (
-          <span className="absolute right-3 text-slate-400 text-sm select-none">{suffix}</span>
+          <span className="absolute right-3 text-sm select-none" style={{ color: 'var(--text-muted)' }}>
+            {suffix}
+          </span>
         )}
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
-      {hint && !error && <p className="text-xs text-slate-500">{hint}</p>}
+      {hint && !error && <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{hint}</p>}
     </div>
   );
 }
@@ -68,15 +67,7 @@ interface CurrencyInputProps {
   id?: string;
 }
 
-export function CurrencyInput({
-  label,
-  value,
-  onChange,
-  error,
-  placeholder = '0',
-  className = '',
-  id,
-}: CurrencyInputProps) {
+export function CurrencyInput({ label, value, onChange, error, placeholder = '0', className = '', id }: CurrencyInputProps) {
   return (
     <Input
       id={id}

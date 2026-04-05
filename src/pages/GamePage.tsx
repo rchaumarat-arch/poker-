@@ -188,15 +188,17 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
   const ghostLabel = dragIndex !== null ? (RANK_LABELS[dragIndex] ?? `${dragIndex + 1}.`) : '';
 
   return (
-    <div className="rounded-2xl p-4 space-y-4" style={{ background: 'linear-gradient(135deg, #0e2018 0%, #081510 100%)', border: '1px solid rgba(201,144,48,0.25)', boxShadow: '0 4px 16px rgba(201,144,48,0.08)' }}>
-      <p className="text-sm font-semibold text-white">Distribution automatique</p>
+    <div className="card p-4 space-y-4">
+      <p className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--gold-bright)' }}>
+        <span style={{ opacity: 0.7 }}>♠</span> Distribution automatique
+      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Left — Ranking */}
         <div>
-          <p className="text-xs text-slate-400 mb-2">
+          <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
             Classement{' '}
-            <span className="text-slate-600">— glisser ou ↑↓</span>
+            <span style={{ opacity: 0.5 }}>— glisser ou ↑↓</span>
           </p>
           <div className="space-y-1.5" ref={listRef}>
             {ranked.map((playerId, i) => {
@@ -216,9 +218,7 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
                       ? 'opacity-0 pointer-events-none'
                       : 'cursor-grab active:cursor-grabbing',
                     // Drop target: visual highlight
-                    isDropTarget
-                      ? 'bg-felt-700 ring-2 ring-amber-400 scale-[1.02]'
-                      : 'bg-felt-800 hover:bg-felt-700',
+                    isDropTarget ? 'card card-gold scale-[1.02]' : 'card',
                   ].join(' ')}
                   onPointerDown={(e) => handlePointerDown(e, i)}
                   onPointerMove={handlePointerMove}
@@ -229,7 +229,7 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
                   <span className="text-sm w-6 text-center leading-none flex-shrink-0 pointer-events-none">
                     {rankLabel}
                   </span>
-                  <span className="flex-1 text-sm text-white truncate pointer-events-none">
+                  <span className="flex-1 text-sm truncate pointer-events-none" style={{ color: 'var(--text-warm)' }}>
                     {player.name}
                   </span>
                   <div className="flex gap-0.5 flex-shrink-0">
@@ -237,18 +237,16 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={() => moveUp(i)}
                       disabled={i === 0 || dragIndex !== null}
-                      className="w-6 h-6 rounded text-slate-500 hover:text-white hover:bg-slate-700 disabled:opacity-20 disabled:cursor-not-allowed text-sm flex items-center justify-center transition-colors"
-                    >
-                      ↑
-                    </button>
+                      className="w-6 h-6 rounded text-sm flex items-center justify-center transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                      style={{ color: 'var(--text-muted)' }}
+                    >↑</button>
                     <button
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={() => moveDown(i)}
                       disabled={i === ranked.length - 1 || dragIndex !== null}
-                      className="w-6 h-6 rounded text-slate-500 hover:text-white hover:bg-slate-700 disabled:opacity-20 disabled:cursor-not-allowed text-sm flex items-center justify-center transition-colors"
-                    >
-                      ↓
-                    </button>
+                      className="w-6 h-6 rounded text-sm flex items-center justify-center transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                      style={{ color: 'var(--text-muted)' }}
+                    >↓</button>
                   </div>
                 </div>
               );
@@ -259,12 +257,11 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
         {/* Right — Rule + Preview */}
         <div className="space-y-3">
           <div>
-            <p className="text-xs text-slate-400 mb-2">Règle de distribution</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Règle de distribution</p>
             <select
               value={rule}
               onChange={(e) => setRule(e.target.value as DistributionRule)}
-              className="w-full border rounded-xl text-white text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none cursor-pointer"
-              style={{ background: '#0e2018', borderColor: 'rgba(201,144,48,0.2)' }}
+              className="input-poker appearance-none cursor-pointer text-sm py-2.5"
             >
               {DIST_RULES.map((r) => (
                 <option key={r.value} value={r.value}>
@@ -276,13 +273,13 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
 
           {rule === 'custom' && (
             <div className="space-y-1.5">
-              <p className="text-xs text-slate-400">Pourcentage par place</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Pourcentage par place</p>
               {ranked.map((playerId, i) => {
                 const player = players[playerId];
                 if (!player) return null;
                 return (
                   <div key={playerId} className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400 w-14 truncate">{player.name}</span>
+                    <span className="text-xs w-14 truncate" style={{ color: 'var(--text-muted)' }}>{player.name}</span>
                     <input
                       type="number"
                       min="0"
@@ -294,10 +291,9 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
                         next[i] = parseFloat(e.target.value) || 0;
                         setCustomPcts(next);
                       }}
-                      className="w-16 rounded-lg text-white text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                      style={{ background: '#163020', border: '1px solid rgba(201,144,48,0.2)' }}
+                      className="input-poker w-16 text-xs py-1.5 px-2"
                     />
-                    <span className="text-xs text-slate-500">%</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>%</span>
                   </div>
                 );
               })}
@@ -309,7 +305,7 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
           )}
 
           <div>
-            <p className="text-xs text-slate-400 mb-2">Aperçu</p>
+            <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>Aperçu</p>
             <div className="space-y-1">
               {ranked.map((playerId) => {
                 const player = players[playerId];
@@ -317,11 +313,8 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
                 const amount = preview[playerId] ?? 0;
                 return (
                   <div key={playerId} className="flex items-center justify-between">
-                    <span className="text-xs text-slate-300">{player.name}</span>
-                    <span
-                      className={`text-xs font-mono font-semibold ${amount === 0 ? 'text-slate-500' : ''}`}
-                      style={amount > 0 ? { color: '#e8b94a' } : undefined}
-                    >
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{player.name}</span>
+                    <span className={amount > 0 ? 'amount-positive text-xs' : 'amount-neutral text-xs'}>
                       {formatCurrencyCompact(amount)}
                     </span>
                   </div>
@@ -457,39 +450,29 @@ function ParticipantCard({
     }
   }
 
-  const cardBorder = isFinished && netGain !== null
-    ? netGain > 0
-      ? 'rgba(201, 144, 48, 0.35)'
-      : netGain < 0
-      ? 'rgba(239, 68, 68, 0.25)'
-      : 'rgba(201, 144, 48, 0.1)'
-    : 'rgba(201, 144, 48, 0.12)';
+  const cardExtra = isFinished && netGain !== null && netGain > 0
+    ? 'card-gold'
+    : '';
+  const cardStyle = isFinished && netGain !== null && netGain < 0
+    ? { border: '1px solid rgba(201,64,64,0.22)' } as React.CSSProperties
+    : undefined;
 
   return (
-    <div
-      className="rounded-2xl overflow-hidden transition-all"
-      style={{
-        background: 'linear-gradient(160deg, #0e2018 0%, #081510 100%)',
-        border: `1px solid ${cardBorder}`,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
-      }}
-    >
+    <div className={`card overflow-hidden ${cardExtra}`} style={cardStyle}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgba(201,144,48,0.1)' }}>
-        <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-            netGain !== null && netGain < 0 ? 'bg-red-500/15 text-red-400' : 'bg-felt-700 text-slate-300'
-          }`}
-          style={netGain !== null && netGain > 0 ? { background: 'rgba(201,144,48,0.15)', color: '#e8b94a' } : undefined}
-        >
+      <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgba(201,160,48,0.1)' }}>
+        <div className={`avatar w-8 h-8 ${
+          netGain !== null && netGain > 0 ? 'avatar-gold' :
+          netGain !== null && netGain < 0 ? 'avatar-red' : 'avatar-neutral'
+        }`}>
           {playerName.charAt(0).toUpperCase()}
         </div>
-        <span className="flex-1 font-semibold text-white">{playerName}</span>
+        <span className="flex-1 font-semibold" style={{ color: 'var(--text-warm)' }}>{playerName}</span>
         {netGain !== null && (
-          <span
-            className={`font-bold font-mono text-sm ${netGain < 0 ? 'text-red-400' : netGain === 0 ? 'text-slate-400' : ''}`}
-            style={netGain > 0 ? { color: '#e8b94a' } : undefined}
-          >
+          <span className={
+            netGain > 0 ? 'amount-positive text-sm' :
+            netGain < 0 ? 'amount-negative text-sm' : 'amount-neutral text-sm'
+          }>
             {formatBalanceSign(netGain)}
           </span>
         )}
@@ -508,9 +491,9 @@ function ParticipantCard({
         {/* Buy-in */}
         <div className="grid grid-cols-2 gap-3 items-end">
           <div>
-            <p className="text-xs text-slate-500 mb-1.5">Mise initiale</p>
+            <p className="text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Mise initiale</p>
             {isFinished ? (
-              <p className="text-white font-mono font-medium">
+              <p className="amount-neutral">
                 {formatCurrencyCompact(participant.initialBuyIn)}
               </p>
             ) : (
@@ -523,15 +506,14 @@ function ParticipantCard({
                   onChange={(e) => setBuyInValue(e.target.value)}
                   onBlur={(e) => commitBuyIn(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && commitBuyIn(buyInValue)}
-                  className="w-full rounded-xl text-white text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  style={{ background: '#0e2018', border: '1px solid rgba(201,144,48,0.2)' }}
+                  className="input-poker pr-8 text-sm py-2"
                 />
-                <span className="absolute right-3 text-slate-400 text-xs">€</span>
+                <span className="absolute right-3 text-xs" style={{ color: 'var(--text-muted)' }}>€</span>
               </div>
             )}
           </div>
           <div>
-            <p className="text-xs text-slate-500 mb-1.5">Total investi</p>
+            <p className="text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Total investi</p>
             <p className="text-white font-mono font-semibold">
               {formatCurrencyCompact(totalInvested)}
             </p>
@@ -541,7 +523,7 @@ function ParticipantCard({
         {/* Rebuys */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               Recaves ({participant.rebuys.length})
             </p>
             {!isFinished && (
@@ -584,7 +566,7 @@ function ParticipantCard({
                       className="w-16 bg-transparent text-xs text-amber-400 font-mono font-medium focus:outline-none"
                     />
                   )}
-                  <span className="text-xs text-slate-500">€</span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>€</span>
                   {!isFinished && (
                     <button
                       onClick={() =>
@@ -613,11 +595,10 @@ function ParticipantCard({
                   value={newRebuyValue}
                   onChange={(e) => setNewRebuyValue(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addRebuy()}
-                  className="w-full rounded-xl text-white text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  style={{ background: '#0e2018', border: '1px solid rgba(201,144,48,0.2)' }}
+                  className="input-poker pr-8 text-sm py-2"
                   autoFocus
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">€</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--text-muted)' }}>€</span>
               </div>
               <Button variant="primary" size="sm" onClick={addRebuy}>
                 OK
@@ -641,9 +622,9 @@ function ParticipantCard({
           <div className="pt-3" style={{ borderTop: '1px solid rgba(201,144,48,0.1)' }}>
             <div className="grid grid-cols-2 gap-3 items-end">
               <div>
-                <p className="text-xs text-slate-500 mb-1.5">Montant récupéré</p>
+                <p className="text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Montant récupéré</p>
                 {isFinished ? (
-                  <p className="text-white font-mono font-medium">
+                  <p className="amount-neutral">
                     {participant.finalAmount !== null
                       ? formatCurrencyCompact(participant.finalAmount)
                       : '—'}
@@ -659,19 +640,17 @@ function ParticipantCard({
                       onBlur={(e) => commitFinalAmount(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && commitFinalAmount(finalValue)}
                       placeholder="0"
-                      className="w-full rounded-xl text-white text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  style={{ background: '#0e2018', border: '1px solid rgba(201,144,48,0.2)' }}
+                      className="input-poker pr-8 text-sm py-2"
                     />
-                    <span className="absolute right-3 text-slate-400 text-xs">€</span>
+                    <span className="absolute right-3 text-xs" style={{ color: 'var(--text-muted)' }}>€</span>
                   </div>
                 )}
               </div>
               <div>
-                <p className="text-xs text-slate-500 mb-1.5">Gain / Perte</p>
+                <p className="text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>Gain / Perte</p>
                 {netGain !== null ? (
                   <p
-                    className={`font-mono font-bold ${netGain < 0 ? 'text-red-400' : netGain === 0 ? 'text-slate-400' : ''}`}
-                    style={netGain > 0 ? { color: '#e8b94a' } : undefined}
+                    className={netGain > 0 ? 'amount-positive' : netGain < 0 ? 'amount-negative' : 'amount-neutral'}
                   >
                     {formatBalanceSign(netGain)}
                   </p>
@@ -721,7 +700,7 @@ export default function GamePage() {
   if (!game) {
     return (
       <div className="text-center py-16 space-y-3">
-        <p className="text-slate-400">Partie introuvable.</p>
+        <p style={{ color: 'var(--text-muted)' }}>Partie introuvable.</p>
         <Link to="/">
           <Button variant="secondary">Retour à l'accueil</Button>
         </Link>
@@ -798,18 +777,18 @@ export default function GamePage() {
       <div className="flex items-start gap-3">
         <Link
           to={group ? `/groups/${group.id}` : '/'}
-          className="mt-0.5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-felt-800 transition-colors flex-shrink-0"
+          className="btn-ghost btn-sm !p-2 !rounded-xl mt-0.5 flex-shrink-0"
         >
           <ChevronLeftIcon />
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-bold text-white truncate">{game.name}</h1>
+            <h1 className="text-xl font-bold truncate" style={{ color: 'var(--text-warm)' }}>{game.name}</h1>
             <Badge variant={isFinished ? 'success' : 'warning'} dot={!isFinished}>
               {isFinished ? 'Terminée' : 'En cours'}
             </Badge>
           </div>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
             {formatDate(game.date)}
             {group && (
               <span>
@@ -832,28 +811,21 @@ export default function GamePage() {
         style={{ background: 'linear-gradient(135deg, #0e2018 0%, #081510 100%)', border: '1px solid rgba(201,144,48,0.18)' }}
       >
         <div className="text-center">
-          <p className="text-xs text-slate-500 mb-1">Total misé</p>
-          <p className="font-bold font-mono text-white text-base">
-            {formatCurrencyCompact(totalInvested)}
-          </p>
+          <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Total misé</p>
+          <p className="amount-neutral font-bold text-base">{formatCurrencyCompact(totalInvested)}</p>
         </div>
-        <div className="text-center" style={{ borderLeft: '1px solid rgba(201,144,48,0.12)', borderRight: '1px solid rgba(201,144,48,0.12)' }}>
-          <p className="text-xs text-slate-500 mb-1">Redistribué</p>
-          <p className="font-bold font-mono text-white text-base">
-            {formatCurrencyCompact(totalRecovered)}
-          </p>
+        <div className="text-center" style={{ borderLeft: '1px solid rgba(201,160,48,0.12)', borderRight: '1px solid rgba(201,160,48,0.12)' }}>
+          <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Redistribué</p>
+          <p className="amount-neutral font-bold text-base">{formatCurrencyCompact(totalRecovered)}</p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-slate-500 mb-1">Balance</p>
+          <p className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Balance</p>
           {allFinalsFilled ? (
-            <p
-              className={`font-bold font-mono text-base ${!balanced ? 'text-red-400' : ''}`}
-              style={balanced ? { color: '#e8b94a' } : undefined}
-            >
+            <p className={`font-bold text-base font-mono ${!balanced ? 'amount-negative' : 'amount-positive'}`}>
               {balanced ? '✓ OK' : formatBalanceSign(imbalance)}
             </p>
           ) : (
-            <p className="text-slate-600 text-base">—</p>
+            <p className="amount-neutral text-base">—</p>
           )}
         </div>
       </div>
@@ -950,7 +922,7 @@ export default function GamePage() {
       {/* Participant Cards */}
       {participants.length === 0 ? (
         <div className="text-center py-10 space-y-3">
-          <p className="text-slate-400">Aucun joueur dans cette partie.</p>
+          <p style={{ color: 'var(--text-muted)' }}>Aucun joueur dans cette partie.</p>
           {availablePlayers.length > 0 && (
             <Button
               variant="primary"
@@ -984,11 +956,13 @@ export default function GamePage() {
       {isFinished && (
         <div className="space-y-5 pt-2">
           {/* Leaderboard */}
-          <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(160deg, #0e2018 0%, #081510 100%)', border: '1px solid rgba(201,144,48,0.22)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
-            <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(201,144,48,0.15)' }}>
-              <h2 className="font-semibold" style={{ color: '#e8b94a' }}>🏆 Résultats de la partie</h2>
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(201,160,48,0.14)' }}>
+              <h2 className="font-semibold flex items-center gap-2" style={{ color: 'var(--gold-bright)' }}>
+                🏆 Résultats de la partie
+              </h2>
             </div>
-            <div style={{ borderTop: 'none' }}>
+            <div>
               {[...sortedParticipants]
                 .sort((a, b) => {
                   const ga = (a.finalAmount ?? 0) - calculateTotalInvested(a);
@@ -1006,31 +980,28 @@ export default function GamePage() {
                     <div
                       key={p.playerId}
                       className="flex items-center gap-3 px-4 py-3"
-                      style={index === 0 && isWinner ? { background: 'rgba(201,144,48,0.05)' } : undefined}
+                      style={{
+                        borderTop: index > 0 ? '1px solid rgba(201,160,48,0.07)' : undefined,
+                        background: index === 0 && isWinner ? 'rgba(201,144,48,0.05)' : undefined,
+                      }}
                     >
-                      <span className="text-slate-500 text-sm font-mono w-5 text-center flex-shrink-0">
+                      <span className="text-sm font-mono w-6 text-center flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
                         {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
                       </span>
                       <div
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                          isLoser ? 'bg-red-500/15 text-red-400' : 'bg-felt-700 text-slate-400'
-                        }`}
-                        style={isWinner ? { background: 'rgba(201,144,48,0.15)', color: '#e8b94a' } : undefined}
+                        className={`avatar w-7 h-7 ${isWinner ? 'avatar-gold' : isLoser ? 'avatar-red' : 'avatar-neutral'}`}
                       >
                         {player.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="flex-1 text-sm font-medium text-white">
+                      <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text-warm)' }}>
                         {player.name}
                       </span>
-                      <div className="text-right text-xs text-slate-500 hidden sm:block">
+                      <div className="text-right text-xs hidden sm:block" style={{ color: 'var(--text-muted)' }}>
                         <span>{formatCurrencyCompact(invested)} misé</span>
                         <span className="mx-1">→</span>
                         <span>{formatCurrencyCompact(p.finalAmount ?? 0)}</span>
                       </div>
-                      <span
-                        className={`font-bold font-mono text-sm ml-2 ${isLoser ? 'text-red-400' : !isWinner ? 'text-slate-400' : ''}`}
-                        style={isWinner ? { color: '#e8b94a' } : undefined}
-                      >
+                      <span className={`ml-2 text-sm ${isWinner ? 'amount-positive' : isLoser ? 'amount-negative' : 'amount-neutral'}`}>
                         {formatBalanceSign(gain)}
                       </span>
                     </div>
@@ -1043,7 +1014,7 @@ export default function GamePage() {
           {transfers.length > 0 && (
             <div className="space-y-3">
               <div>
-                <h2 className="font-semibold text-white">Remboursements à effectuer</h2>
+                <h2 className="section-header">Remboursements à effectuer</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Plan optimal pour équilibrer les comptes
                 </p>
@@ -1056,21 +1027,19 @@ export default function GamePage() {
                   return (
                     <div
                       key={i}
-                      className="rounded-xl p-3 flex items-center gap-2 flex-wrap"
-                      style={{ background: '#0e2018', border: '1px solid rgba(201,144,48,0.15)' }}
+                      className="transfer-row"
                     >
                       <div className="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center text-xs font-bold text-red-400 flex-shrink-0">
                         {from.name.charAt(0)}
                       </div>
                       <span className="text-slate-300 text-sm font-medium">{from.name}</span>
                       <span className="text-slate-500 text-sm">paye</span>
-                      <span className="font-bold font-mono rounded-lg px-2 py-0.5 text-sm" style={{ background: 'rgba(201,144,48,0.12)', color: '#e8b94a', border: '1px solid rgba(201,144,48,0.2)' }}>
+                      <span className="amount-positive text-sm px-2 py-0.5 rounded-lg" style={{ background: 'rgba(201,160,48,0.1)', border: '1px solid rgba(201,160,48,0.22)' }}>
                         {formatCurrencyCompact(t.amount)}
                       </span>
                       <span className="text-slate-500 text-sm">à</span>
                       <div
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                        style={{ background: 'rgba(201,144,48,0.15)', color: '#e8b94a' }}
+                        className="avatar w-7 h-7 avatar-gold"
                       >
                         {to.name.charAt(0)}
                       </div>
@@ -1083,8 +1052,8 @@ export default function GamePage() {
           )}
 
           {transfers.length === 0 && participants.length > 0 && (
-            <div className="rounded-2xl p-4 text-center" style={{ background: 'rgba(201,144,48,0.06)', border: '1px solid rgba(201,144,48,0.2)' }}>
-              <p className="font-medium" style={{ color: '#e8b94a' }}>
+            <div className="banner-settled">
+              <p className="font-medium text-sm" style={{ color: 'var(--gold-bright)' }}>
                 ✓ Aucun remboursement nécessaire — tout le monde est quitte !
               </p>
             </div>

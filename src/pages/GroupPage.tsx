@@ -93,7 +93,7 @@ export default function GroupPage() {
   if (!group) {
     return (
       <div className="text-center py-16 space-y-3">
-        <p className="text-slate-400">Groupe introuvable.</p>
+        <p style={{ color: 'var(--text-muted)' }}>Groupe introuvable.</p>
         <Link to="/">
           <Button variant="secondary">Retour à l'accueil</Button>
         </Link>
@@ -232,31 +232,24 @@ export default function GroupPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to="/" className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-felt-800 transition-colors">
+        <Link to="/" className="btn-ghost btn-sm !p-2 !rounded-xl">
           <ChevronLeftIcon />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-white truncate">{group.name}</h1>
-          <p className="text-sm text-slate-400">{members.length} membre{members.length > 1 ? 's' : ''}</p>
+          <h1 className="text-xl font-bold truncate" style={{ color: 'var(--text-warm)' }}>{group.name}</h1>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            {members.length} membre{members.length > 1 ? 's' : ''}
+          </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-2xl p-1" style={{ background: '#081510', border: '1px solid rgba(201,144,48,0.12)' }}>
+      <div className="tab-bar">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
-              activeTab === tab.id
-                ? 'text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-200'
-            }`}
-            style={activeTab === tab.id ? {
-              background: 'rgba(201, 144, 48, 0.15)',
-              border: '1px solid rgba(201, 144, 48, 0.3)',
-              color: '#e8b94a',
-            } : undefined}
+            className={`tab-item${activeTab === tab.id ? ' tab-active' : ''}`}
           >
             {tab.label}
           </button>
@@ -267,7 +260,7 @@ export default function GroupPage() {
       {activeTab === 'games' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-400">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               {groupGames.length} partie{groupGames.length > 1 ? 's' : ''}
             </p>
             <Button variant="primary" size="sm" icon={<PlusIcon />} onClick={openCreateGame}>
@@ -277,7 +270,7 @@ export default function GroupPage() {
 
           {groupGames.length === 0 ? (
             <div className="text-center py-12 space-y-3">
-              <p className="text-slate-400">Aucune partie pour l'instant.</p>
+              <p style={{ color: 'var(--text-muted)' }}>Aucune partie pour l'instant.</p>
               <Button variant="primary" icon={<PlusIcon />} onClick={openCreateGame}>
                 Créer la première partie
               </Button>
@@ -289,44 +282,39 @@ export default function GroupPage() {
                 const participantCount = Object.keys(game.participants).length;
                 const isFinished = game.status === 'finished';
                 return (
-                  <div
-                    key={game.id}
-                    className="rounded-2xl p-4 transition-all hover:brightness-110"
-                    style={{
-                      background: 'linear-gradient(135deg, #0e2018 0%, #081510 100%)',
-                      border: '1px solid rgba(201, 144, 48, 0.15)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
-                    }}
-                  >
+                  <div key={game.id} className="card card-interactive p-4">
                     <div className="flex items-center gap-3">
                       <button
                         className="flex-1 flex items-center gap-3 text-left min-w-0"
                         onClick={() => navigate(`/games/${game.id}`)}
                       >
+                        {/* Game status icon */}
                         <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0`}
+                          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                           style={isFinished ? {
-                            background: 'rgba(201, 144, 48, 0.1)',
-                            border: '1px solid rgba(201, 144, 48, 0.3)',
+                            background: 'rgba(201,160,48,0.1)',
+                            border: '1px solid rgba(201,160,48,0.28)',
                           } : {
-                            background: 'rgba(251, 191, 36, 0.1)',
-                            border: '1px solid rgba(251, 191, 36, 0.3)',
+                            background: 'rgba(230,160,40,0.1)',
+                            border: '1px solid rgba(230,160,40,0.3)',
                           }}
                         >
                           {isFinished ? (
-                            <span style={{ color: '#e8b94a' }}><CheckIcon /></span>
+                            <span className="suit-diamond text-base">♦</span>
                           ) : (
-                            <span className="text-amber-400 text-xs font-bold">EN</span>
+                            <span className="suit-spade text-base" style={{ color: '#f0b040', opacity: 1 }}>♠</span>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-white truncate">{game.name}</span>
+                            <span className="font-semibold truncate" style={{ color: 'var(--text-warm)' }}>
+                              {game.name}
+                            </span>
                             <Badge variant={isFinished ? 'success' : 'warning'} dot={!isFinished}>
                               {isFinished ? 'Terminée' : 'En cours'}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                          <div className="flex items-center gap-3 mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
                             <span>{formatDate(game.date)}</span>
                             <span>•</span>
                             <span>{participantCount} joueur{participantCount > 1 ? 's' : ''}</span>
@@ -338,7 +326,10 @@ export default function GroupPage() {
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <button
                           onClick={() => openEditGame(game.id)}
-                          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-felt-800 transition-colors"
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-warm)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
                         >
                           <EditIcon />
                         </button>
@@ -350,7 +341,10 @@ export default function GroupPage() {
                         </button>
                         <button
                           onClick={() => navigate(`/games/${game.id}`)}
-                          className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-felt-800 transition-colors"
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: 'var(--text-muted)' }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-warm)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
                         >
                           <ChevronRightIcon />
                         </button>
@@ -369,9 +363,12 @@ export default function GroupPage() {
         <div className="space-y-6">
           {/* Per-player stats */}
           <div className="space-y-3">
-            <h2 className="text-base font-semibold text-white">Soldes cumulés</h2>
+            <h2 className="section-header">
+              <span className="suit-diamond">♦</span>
+              Soldes cumulés
+            </h2>
             {members.length === 0 ? (
-              <p className="text-slate-500 text-sm">Aucun membre dans ce groupe.</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Aucun membre dans ce groupe.</p>
             ) : (
               <div className="space-y-2">
                 {memberStats
@@ -385,32 +382,19 @@ export default function GroupPage() {
                     return (
                       <div
                         key={stats.playerId}
-                        className="rounded-2xl p-4"
-                        style={{
-                          background: 'linear-gradient(135deg, #0e2018 0%, #081510 100%)',
-                          border: isPositive
-                            ? '1px solid rgba(201, 144, 48, 0.25)'
-                            : isNegative
-                            ? '1px solid rgba(239, 68, 68, 0.2)'
-                            : '1px solid rgba(201, 144, 48, 0.1)',
-                        }}
+                        className={`card p-4${isPositive ? ' card-gold' : ''}`}
+                        style={isNegative ? { border: '1px solid rgba(201,64,64,0.2)' } : undefined}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold ${
-                                isNegative ? 'bg-red-500/15 text-red-400' : 'bg-slate-700 text-slate-400'
-                              }`}
-                              style={isPositive ? {
-                                background: 'rgba(201, 144, 48, 0.15)',
-                                color: '#e8b94a',
-                              } : undefined}
+                              className={`avatar w-9 h-9${isPositive ? ' avatar-gold' : isNegative ? ' avatar-red' : ' avatar-neutral'}`}
                             >
                               {player.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold text-white">{player.name}</p>
-                              <p className="text-xs text-slate-500">
+                              <p className="font-semibold" style={{ color: 'var(--text-warm)' }}>{player.name}</p>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                 {stats.gamesPlayed} partie{stats.gamesPlayed > 1 ? 's' : ''}
                                 {stats.settledAmount !== 0 && (
                                   <span>
@@ -422,15 +406,10 @@ export default function GroupPage() {
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <div className="text-right">
-                              <p
-                                className={`font-bold font-mono text-sm ${
-                                  isNegative ? 'text-red-400' : isSettled ? 'text-slate-400' : ''
-                                }`}
-                                style={isPositive ? { color: '#e8b94a' } : undefined}
-                              >
+                              <p className={`font-bold text-sm${isPositive ? ' amount-positive' : isNegative ? ' amount-negative' : ' amount-neutral'}`}>
                                 {formatBalanceSign(stats.currentBalance)}
                               </p>
-                              <p className="text-xs text-slate-500">
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                 {isSettled ? 'Soldé' : isPositive ? 'À recevoir' : 'À payer'}
                               </p>
                             </div>
@@ -447,27 +426,22 @@ export default function GroupPage() {
                         </div>
 
                         {/* Breakdown */}
-                        <div className="mt-3 pt-3 grid grid-cols-3 gap-2 text-xs" style={{ borderTop: '1px solid rgba(201,144,48,0.1)' }}>
+                        <div className="mt-3 pt-3 grid grid-cols-3 gap-2 text-xs card-divider">
                           <div>
-                            <p className="text-slate-500">Misé</p>
-                            <p className="text-white font-mono font-medium">
+                            <p style={{ color: 'var(--text-muted)' }}>Misé</p>
+                            <p className="font-mono font-medium" style={{ color: 'var(--text-warm)' }}>
                               {formatCurrencyCompact(stats.totalInvested)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-slate-500">Récupéré</p>
-                            <p className="text-white font-mono font-medium">
+                            <p style={{ color: 'var(--text-muted)' }}>Récupéré</p>
+                            <p className="font-mono font-medium" style={{ color: 'var(--text-warm)' }}>
                               {formatCurrencyCompact(stats.totalRecovered)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-slate-500">Bilan net</p>
-                            <p
-                              className={`font-mono font-medium ${
-                                stats.netBalance < 0 ? 'text-red-400' : stats.netBalance === 0 ? 'text-slate-400' : ''
-                              }`}
-                              style={stats.netBalance > 0 ? { color: '#e8b94a' } : undefined}
-                            >
+                            <p style={{ color: 'var(--text-muted)' }}>Bilan net</p>
+                            <p className={`font-mono font-medium${stats.netBalance > 0 ? ' amount-positive' : stats.netBalance < 0 ? ' amount-negative' : ' amount-neutral'}`}>
                               {formatBalanceSign(stats.netBalance)}
                             </p>
                           </div>
@@ -482,10 +456,11 @@ export default function GroupPage() {
           {/* Optimal transfers */}
           {cumulativeTransfers.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-base font-semibold text-white">
+              <h2 className="section-header">
+                <span className="suit-heart">♥</span>
                 Remboursements optimaux
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 Plan minimal pour équilibrer tous les soldes non réglés
               </p>
               <div className="space-y-2">
@@ -494,30 +469,20 @@ export default function GroupPage() {
                   const to = state.players[t.to];
                   if (!from || !to) return null;
                   return (
-                    <div
-                      key={i}
-                      className="rounded-xl p-3 flex items-center gap-3"
-                      style={{
-                        background: '#0e2018',
-                        border: '1px solid rgba(201, 144, 48, 0.15)',
-                      }}
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center text-xs font-bold text-red-400 flex-shrink-0">
+                    <div key={i} className="transfer-row">
+                      <div className="avatar w-7 h-7 avatar-red flex-shrink-0">
                         {from.name.charAt(0)}
                       </div>
-                      <span className="text-slate-300 text-sm font-medium">{from.name}</span>
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-warm)' }}>{from.name}</span>
                       <ArrowRightIcon />
-                      <span className="font-bold font-mono text-sm" style={{ color: '#e8b94a' }}>
+                      <span className="amount-positive text-sm">
                         {formatCurrencyCompact(t.amount)}
                       </span>
                       <ArrowRightIcon />
-                      <div
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                        style={{ background: 'rgba(201,144,48,0.15)', color: '#e8b94a' }}
-                      >
+                      <div className="avatar w-7 h-7 avatar-gold flex-shrink-0">
                         {to.name.charAt(0)}
                       </div>
-                      <span className="text-slate-300 text-sm font-medium">{to.name}</span>
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-warm)' }}>{to.name}</span>
                     </div>
                   );
                 })}
@@ -526,8 +491,8 @@ export default function GroupPage() {
           )}
 
           {cumulativeTransfers.length === 0 && memberStats.length > 0 && (
-            <div className="rounded-2xl p-4 text-center" style={{ background: 'rgba(201,144,48,0.05)', border: '1px solid rgba(201,144,48,0.2)' }}>
-              <p className="font-medium text-sm" style={{ color: '#e8b94a' }}>✓ Tous les comptes sont soldés</p>
+            <div className="banner-settled">
+              <p style={{ color: 'var(--gold-bright)' }}>✓ Tous les comptes sont soldés</p>
             </div>
           )}
         </div>
@@ -537,7 +502,10 @@ export default function GroupPage() {
       {activeTab === 'history' && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <h2 className="text-base font-semibold text-white">Historique des règlements</h2>
+            <h2 className="section-header">
+              <span className="suit-club">♣</span>
+              Historique des règlements
+            </h2>
           </div>
 
           {/* Filter by player */}
@@ -545,16 +513,7 @@ export default function GroupPage() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setFilterPlayerId('')}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                style={filterPlayerId === '' ? {
-                  background: 'rgba(201,144,48,0.2)',
-                  border: '1px solid rgba(201,144,48,0.4)',
-                  color: '#e8b94a',
-                } : {
-                  background: '#0e2018',
-                  border: '1px solid rgba(201,144,48,0.1)',
-                  color: '#94a3b8',
-                }}
+                className={`filter-pill${filterPlayerId === '' ? ' active' : ''}`}
               >
                 Tous
               </button>
@@ -562,16 +521,7 @@ export default function GroupPage() {
                 <button
                   key={p.id}
                   onClick={() => setFilterPlayerId(p.id === filterPlayerId ? '' : p.id)}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                  style={filterPlayerId === p.id ? {
-                    background: 'rgba(201,144,48,0.2)',
-                    border: '1px solid rgba(201,144,48,0.4)',
-                    color: '#e8b94a',
-                  } : {
-                    background: '#0e2018',
-                    border: '1px solid rgba(201,144,48,0.1)',
-                    color: '#94a3b8',
-                  }}
+                  className={`filter-pill${filterPlayerId === p.id ? ' active' : ''}`}
                 >
                   {p.name}
                 </button>
@@ -581,8 +531,8 @@ export default function GroupPage() {
 
           {filteredSettlements.length === 0 ? (
             <div className="text-center py-10">
-              <p className="text-slate-500 text-sm">Aucun règlement enregistré.</p>
-              <p className="text-slate-600 text-xs mt-1">
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Aucun règlement enregistré.</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                 Utilisez "Régler" dans l'onglet Soldes pour enregistrer un remboursement.
               </p>
             </div>
@@ -592,36 +542,26 @@ export default function GroupPage() {
                 const player = state.players[settlement.playerId];
                 if (!player) return null;
                 return (
-                  <div
-                    key={settlement.id}
-                    className="rounded-xl p-3 flex items-center gap-3"
-                    style={{ background: '#0e2018', border: '1px solid rgba(201,144,48,0.12)' }}
-                  >
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      style={{ background: 'rgba(201,144,48,0.12)', color: '#e8b94a' }}
-                    >
+                  <div key={settlement.id} className="card p-3 flex items-center gap-3">
+                    <div className="avatar w-8 h-8 avatar-gold flex-shrink-0">
                       {player.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-white">{player.name}</span>
+                        <span className="text-sm font-medium" style={{ color: 'var(--text-warm)' }}>{player.name}</span>
                         <Badge variant="gold">
                           <CheckIcon />
                           Réglé
                         </Badge>
                       </div>
-                      <p className="text-xs text-slate-500 truncate">{settlement.note}</p>
-                      <p className="text-xs text-slate-600">{formatDateTime(settlement.date)}</p>
+                      <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{settlement.note}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatDateTime(settlement.date)}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p
-                        className={`text-sm font-bold font-mono ${settlement.settledBalance < 0 ? 'text-red-400' : ''}`}
-                        style={settlement.settledBalance > 0 ? { color: '#e8b94a' } : undefined}
-                      >
+                      <p className={`text-sm${settlement.settledBalance > 0 ? ' amount-positive' : settlement.settledBalance < 0 ? ' amount-negative' : ' amount-neutral'}`}>
                         {formatBalanceSign(settlement.settledBalance)}
                       </p>
-                      <p className="text-xs text-slate-500">soldé</p>
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>soldé</p>
                     </div>
                     <button
                       onClick={() => setDeleteSettlementId(settlement.id)}
@@ -681,9 +621,9 @@ export default function GroupPage() {
               Joueurs participants
             </p>
             {members.length === 0 ? (
-              <p className="text-slate-500 text-sm">
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 Aucun membre dans ce groupe.{' '}
-                <Link to="/" className="underline" style={{ color: '#e8b94a' }}>
+                <Link to="/" className="underline" style={{ color: 'var(--gold-bright)' }}>
                   Gérer les membres →
                 </Link>
               </p>
@@ -707,7 +647,7 @@ export default function GroupPage() {
                         }}
                         className="w-4 h-4 accent-amber-500"
                       />
-                      <span className="text-white text-sm">{player.name}</span>
+                      <span className="text-sm" style={{ color: 'var(--text-warm)' }}>{player.name}</span>
                     </label>
                   );
                 })}
@@ -757,23 +697,18 @@ export default function GroupPage() {
         {settlingStats && (
           <div className="space-y-4">
             <div
-              className="p-4 rounded-xl"
+              className="card p-4"
               style={settlingStats.currentBalance > 0 ? {
-                background: 'rgba(201,144,48,0.08)',
-                border: '1px solid rgba(201,144,48,0.3)',
+                border: '1px solid rgba(201,160,48,0.3)',
               } : {
-                background: 'rgba(239,68,68,0.08)',
-                border: '1px solid rgba(239,68,68,0.25)',
+                border: '1px solid rgba(201,64,64,0.2)',
               }}
             >
               <p className="text-sm text-slate-300">Solde actuel à régler</p>
-              <p
-                className={`text-2xl font-bold font-mono mt-1 ${settlingStats.currentBalance < 0 ? 'text-red-400' : ''}`}
-                style={settlingStats.currentBalance > 0 ? { color: '#e8b94a' } : undefined}
-              >
+              <p className={`text-2xl font-bold mt-1${settlingStats.currentBalance > 0 ? ' amount-positive' : settlingStats.currentBalance < 0 ? ' amount-negative' : ' amount-neutral'}`}>
                 {formatBalanceSign(settlingStats.currentBalance)}
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                 {settlingStats.currentBalance > 0
                   ? `${settlingPlayer?.name} a ${formatCurrency(settlingStats.currentBalance)} à recevoir des autres joueurs`
                   : `${settlingPlayer?.name} doit ${formatCurrency(Math.abs(settlingStats.currentBalance))} aux autres joueurs`}
@@ -785,7 +720,7 @@ export default function GroupPage() {
               onChange={(e) => setSettleNote(e.target.value)}
               placeholder="Ex: Remboursement en liquide"
             />
-            <p className="text-xs text-slate-500">
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
               Le solde actuel sera marqué comme réglé. L'historique des parties ne sera pas modifié.
             </p>
             <div className="flex gap-3 justify-end">

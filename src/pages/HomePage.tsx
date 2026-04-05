@@ -15,130 +15,93 @@ function PlusIcon() {
     </svg>
   );
 }
-
 function ChevronRightIcon() {
   return (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
     </svg>
   );
 }
-
 function EditIcon() {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
     </svg>
   );
 }
-
 function TrashIcon() {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
   );
 }
-
 function UserIcon() {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   );
 }
-
 function DownloadIcon() {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>
   );
 }
-
 function UploadIcon() {
   return (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
     </svg>
   );
 }
+
+// Assign a suit symbol per group (cycles through the 4 suits)
+const SUITS = ['♠', '♥', '♦', '♣'];
+const SUIT_CLASSES = ['suit-spade', 'suit-spade', 'suit-heart', 'suit-diamond'];
 
 export default function HomePage() {
   const { state, dispatch, exportData, importData } = useApp();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Group modal
   const [groupModal, setGroupModal] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [editGroupId, setEditGroupId] = useState<string | null>(null);
 
-  // Player modal
   const [playerModal, setPlayerModal] = useState(false);
   const [playerName, setPlayerName] = useState('');
   const [editPlayerId, setEditPlayerId] = useState<string | null>(null);
 
-  // Delete confirms
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null);
   const [deletePlayerId, setDeletePlayerId] = useState<string | null>(null);
-
-  // Manage members modal
   const [membersGroupId, setMembersGroupId] = useState<string | null>(null);
 
   const groups = Object.values(state.groups).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-  const players = Object.values(state.players).sort((a, b) =>
-    a.name.localeCompare(b.name)
-  );
+  const players = Object.values(state.players).sort((a, b) => a.name.localeCompare(b.name));
 
-  function openCreateGroup() {
-    setGroupName('');
-    setEditGroupId(null);
-    setGroupModal(true);
-  }
-
-  function openEditGroup(id: string) {
-    setGroupName(state.groups[id].name);
-    setEditGroupId(id);
-    setGroupModal(true);
-  }
-
+  function openCreateGroup() { setGroupName(''); setEditGroupId(null); setGroupModal(true); }
+  function openEditGroup(id: string) { setGroupName(state.groups[id].name); setEditGroupId(id); setGroupModal(true); }
   function submitGroup() {
     const name = groupName.trim();
     if (!name) return;
-    if (editGroupId) {
-      dispatch({ type: 'UPDATE_GROUP', payload: { id: editGroupId, name } });
-    } else {
-      dispatch({ type: 'ADD_GROUP', payload: { name, memberIds: [] } });
-    }
-    setGroupModal(false);
-    setGroupName('');
+    if (editGroupId) dispatch({ type: 'UPDATE_GROUP', payload: { id: editGroupId, name } });
+    else dispatch({ type: 'ADD_GROUP', payload: { name, memberIds: [] } });
+    setGroupModal(false); setGroupName('');
   }
 
-  function openCreatePlayer() {
-    setPlayerName('');
-    setEditPlayerId(null);
-    setPlayerModal(true);
-  }
-
-  function openEditPlayer(id: string) {
-    setPlayerName(state.players[id].name);
-    setEditPlayerId(id);
-    setPlayerModal(true);
-  }
-
+  function openCreatePlayer() { setPlayerName(''); setEditPlayerId(null); setPlayerModal(true); }
+  function openEditPlayer(id: string) { setPlayerName(state.players[id].name); setEditPlayerId(id); setPlayerModal(true); }
   function submitPlayer() {
     const name = playerName.trim();
     if (!name) return;
-    if (editPlayerId) {
-      dispatch({ type: 'UPDATE_PLAYER', payload: { id: editPlayerId, name } });
-    } else {
-      dispatch({ type: 'ADD_PLAYER', payload: { name } });
-    }
-    setPlayerModal(false);
-    setPlayerName('');
+    if (editPlayerId) dispatch({ type: 'UPDATE_PLAYER', payload: { id: editPlayerId, name } });
+    else dispatch({ type: 'ADD_PLAYER', payload: { name } });
+    setPlayerModal(false); setPlayerName('');
   }
 
   function getGroupStats(groupId: string) {
@@ -146,24 +109,25 @@ export default function HomePage() {
     const games = Object.values(state.games).filter((g) => g.groupId === groupId);
     const activeGames = games.filter((g) => g.status === 'in-progress');
     const lastGame = games.sort((a, b) => b.date.localeCompare(a.date))[0];
-    return {
-      memberCount: group.memberIds.length,
-      gameCount: games.length,
-      activeGames: activeGames.length,
-      lastDate: lastGame?.date,
-    };
+    return { memberCount: group.memberIds.length, gameCount: games.length, activeGames: activeGames.length, lastDate: lastGame?.date };
   }
 
   const membersGroup = membersGroupId ? state.groups[membersGroupId] : null;
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+
+      {/* ── Page Header ── */}
+      <div className="flex items-start justify-between gap-4 pt-2">
         <div>
-          <h1 className="text-2xl font-bold text-white">Mes groupes</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Gérez vos groupes de poker et l'historique des parties
+          <div className="flex items-center gap-2 mb-1">
+            <span style={{ color: 'var(--gold)', opacity: 0.5 }} className="text-lg">♦</span>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-warm)', letterSpacing: '-0.03em' }}>
+              Mes groupes
+            </h1>
+          </div>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            Gérez vos tables de poker et l'historique des parties
           </p>
         </div>
         <Button variant="primary" icon={<PlusIcon />} onClick={openCreateGroup}>
@@ -171,99 +135,95 @@ export default function HomePage() {
         </Button>
       </div>
 
-      {/* Groups */}
+      {/* ── Groups ── */}
       {groups.length === 0 ? (
-        <div className="text-center py-16 space-y-3">
-          <div className="text-5xl" style={{ color: '#e8b94a' }}>♠</div>
-          <p className="text-slate-400">Aucun groupe pour l'instant.</p>
+        <div className="text-center py-20 space-y-4">
+          <div className="text-6xl" style={{ color: 'var(--gold)', opacity: 0.3, letterSpacing: '0.2rem' }}>
+            ♠ ♥ ♦ ♣
+          </div>
+          <p style={{ color: 'var(--text-muted)' }}>Aucun groupe pour l'instant.</p>
           <Button variant="primary" icon={<PlusIcon />} onClick={openCreateGroup}>
             Créer votre premier groupe
           </Button>
         </div>
       ) : (
         <div className="space-y-3">
-          {groups.map((group) => {
+          {groups.map((group, idx) => {
             const stats = getGroupStats(group.id);
+            const suit = SUITS[idx % 4];
+            const suitCls = SUIT_CLASSES[idx % 4];
             return (
               <div
                 key={group.id}
-                className="rounded-2xl p-4 transition-all hover:brightness-110"
-                style={{
-                  background: 'linear-gradient(135deg, #0e2018 0%, #081510 100%)',
-                  border: '1px solid rgba(201, 144, 48, 0.18)',
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
-                }}
+                className="card card-interactive"
+                onClick={() => navigate(`/groups/${group.id}`)}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4 p-4" onClick={(e) => e.stopPropagation()}>
+
+                  {/* Avatar */}
                   <button
-                    className="flex-1 flex items-center gap-3 text-left min-w-0"
+                    className="flex-shrink-0"
+                    onClick={() => navigate(`/groups/${group.id}`)}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: 14, background: 'rgba(201,160,48,0.1)', border: '1px solid rgba(201,160,48,0.28)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)' }}
+                  >
+                    <span className={`text-base leading-none ${suitCls}`}>{suit}</span>
+                    <span className="text-xs font-bold mt-0.5" style={{ color: 'var(--gold-bright)' }}>
+                      {group.name.charAt(0).toUpperCase()}
+                    </span>
+                  </button>
+
+                  {/* Info */}
+                  <button
+                    className="flex-1 text-left min-w-0"
                     onClick={() => navigate(`/groups/${group.id}`)}
                   >
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: 'rgba(201, 144, 48, 0.12)',
-                        border: '1px solid rgba(201, 144, 48, 0.3)',
-                      }}
-                    >
-                      <span className="font-bold text-base" style={{ color: '#e8b94a' }}>
-                        {group.name.charAt(0).toUpperCase()}
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="font-semibold text-sm" style={{ color: 'var(--text-warm)' }}>
+                        {group.name}
                       </span>
+                      {stats.activeGames > 0 && (
+                        <Badge variant="warning" dot>{stats.activeGames} en cours</Badge>
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-white truncate">{group.name}</span>
-                        {stats.activeGames > 0 && (
-                          <Badge variant="warning" dot>
-                            {stats.activeGames} en cours
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-                        <span>{stats.memberCount} membre{stats.memberCount > 1 ? 's' : ''}</span>
-                        <span>•</span>
-                        <span>{stats.gameCount} partie{stats.gameCount > 1 ? 's' : ''}</span>
-                        {stats.lastDate && (
-                          <>
-                            <span>•</span>
-                            <span>Dernière: {formatDate(stats.lastDate)}</span>
-                          </>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                      <span>{stats.memberCount} membre{stats.memberCount > 1 ? 's' : ''}</span>
+                      <span style={{ opacity: 0.4 }}>•</span>
+                      <span>{stats.gameCount} partie{stats.gameCount > 1 ? 's' : ''}</span>
+                      {stats.lastDate && (
+                        <>
+                          <span style={{ opacity: 0.4 }}>•</span>
+                          <span>{formatDate(stats.lastDate)}</span>
+                        </>
+                      )}
                     </div>
                   </button>
-                  <div className="flex items-center gap-1 flex-shrink-0">
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMembersGroupId(group.id);
-                      }}
-                      className="p-2 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setMembersGroupId(group.id); }}
+                      className="btn-ghost btn-sm !p-2 !rounded-lg"
                       title="Gérer les membres"
                     >
                       <UserIcon />
                     </button>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditGroup(group.id);
-                      }}
-                      className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); openEditGroup(group.id); }}
+                      className="btn-ghost btn-sm !p-2 !rounded-lg"
                     >
                       <EditIcon />
                     </button>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteGroupId(group.id);
-                      }}
-                      className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); setDeleteGroupId(group.id); }}
+                      className="btn-ghost btn-sm !p-2 !rounded-lg"
+                      style={{ color: 'rgba(240,128,128,0.6)' }}
                     >
                       <TrashIcon />
                     </button>
+                    <div className="w-px h-5 mx-1" style={{ background: 'rgba(201,160,48,0.15)' }} />
                     <button
                       onClick={() => navigate(`/groups/${group.id}`)}
-                      className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
+                      className="btn-ghost btn-sm !p-2 !rounded-lg"
                     >
                       <ChevronRightIcon />
                     </button>
@@ -275,16 +235,16 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Players Section */}
+      {/* ── Players ── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Joueurs</h2>
+          <h2 className="section-header">Joueurs</h2>
           <Button variant="ghost" size="sm" icon={<PlusIcon />} onClick={openCreatePlayer}>
             Ajouter
           </Button>
         </div>
         {players.length === 0 ? (
-          <p className="text-slate-500 text-sm">Aucun joueur enregistré.</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Aucun joueur enregistré.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {players.map((player) => {
@@ -292,31 +252,23 @@ export default function HomePage() {
                 g.memberIds.includes(player.id)
               ).length;
               return (
-                <div
-                  key={player.id}
-                  className="rounded-xl p-3 flex items-center justify-between gap-2"
-                  style={{
-                    background: '#0e2018',
-                    border: '1px solid rgba(201, 144, 48, 0.12)',
-                  }}
-                >
+                <div key={player.id} className="card p-3 flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-medium text-white text-sm truncate">{player.name}</p>
-                    <p className="text-xs text-slate-500">
+                    <div className="flex items-center gap-1.5">
+                      <span style={{ color: 'var(--gold)', opacity: 0.5, fontSize: '0.7rem' }}>♣</span>
+                      <p className="font-medium text-sm truncate" style={{ color: 'var(--text-warm)' }}>
+                        {player.name}
+                      </p>
+                    </div>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                       {groupCount} groupe{groupCount > 1 ? 's' : ''}
                     </p>
                   </div>
                   <div className="flex items-center gap-0.5 flex-shrink-0">
-                    <button
-                      onClick={() => openEditPlayer(player.id)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
-                    >
+                    <button onClick={() => openEditPlayer(player.id)} className="btn-ghost btn-sm !p-1.5 !rounded-lg">
                       <EditIcon />
                     </button>
-                    <button
-                      onClick={() => setDeletePlayerId(player.id)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    >
+                    <button onClick={() => setDeletePlayerId(player.id)} className="btn-ghost btn-sm !p-1.5 !rounded-lg" style={{ color: 'rgba(240,128,128,0.6)' }}>
                       <TrashIcon />
                     </button>
                   </div>
@@ -327,62 +279,28 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Data Management */}
-      <div className="pt-6 space-y-3" style={{ borderTop: '1px solid rgba(201, 144, 48, 0.12)' }}>
-        <h2 className="text-sm font-medium text-slate-400">Données</h2>
+      {/* ── Data Management ── */}
+      <div className="space-y-3 pt-5" style={{ borderTop: '1px solid rgba(201,160,48,0.1)' }}>
+        <h2 className="text-xs font-medium uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+          Données
+        </h2>
         <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" size="sm" icon={<DownloadIcon />} onClick={exportData}>
-            Exporter JSON
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<UploadIcon />}
-            onClick={() => fileRef.current?.click()}
-          >
-            Importer JSON
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => dispatch({ type: 'LOAD_DEMO' })}
-          >
-            Charger démo
-          </Button>
+          <Button variant="ghost" size="sm" icon={<DownloadIcon />} onClick={exportData}>Exporter JSON</Button>
+          <Button variant="ghost" size="sm" icon={<UploadIcon />} onClick={() => fileRef.current?.click()}>Importer JSON</Button>
+          <Button variant="ghost" size="sm" onClick={() => dispatch({ type: 'LOAD_DEMO' })}>Charger démo</Button>
         </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".json"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) importData(file);
-            e.target.value = '';
-          }}
-        />
+        <input ref={fileRef} type="file" accept=".json" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) importData(f); e.target.value = ''; }} />
       </div>
 
-      {/* Group Modal */}
-      <Modal
-        isOpen={groupModal}
-        onClose={() => setGroupModal(false)}
-        title={editGroupId ? 'Renommer le groupe' : 'Créer un groupe'}
-        size="sm"
-      >
+      {/* ── Modals ── */}
+      <Modal isOpen={groupModal} onClose={() => setGroupModal(false)}
+        title={editGroupId ? 'Renommer le groupe' : 'Créer un groupe'} size="sm">
         <div className="space-y-4">
-          <Input
-            label="Nom du groupe"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            placeholder="Ex: Les Potes du Vendredi"
-            onKeyDown={(e) => e.key === 'Enter' && submitGroup()}
-            autoFocus
-          />
+          <Input label="Nom du groupe" value={groupName} onChange={(e) => setGroupName(e.target.value)}
+            placeholder="Ex: Les Potes du Vendredi" onKeyDown={(e) => e.key === 'Enter' && submitGroup()} autoFocus />
           <div className="flex gap-3 justify-end">
-            <Button variant="ghost" onClick={() => setGroupModal(false)}>
-              Annuler
-            </Button>
+            <Button variant="ghost" onClick={() => setGroupModal(false)}>Annuler</Button>
             <Button variant="primary" onClick={submitGroup} disabled={!groupName.trim()}>
               {editGroupId ? 'Enregistrer' : 'Créer'}
             </Button>
@@ -390,26 +308,13 @@ export default function HomePage() {
         </div>
       </Modal>
 
-      {/* Player Modal */}
-      <Modal
-        isOpen={playerModal}
-        onClose={() => setPlayerModal(false)}
-        title={editPlayerId ? 'Modifier le joueur' : 'Ajouter un joueur'}
-        size="sm"
-      >
+      <Modal isOpen={playerModal} onClose={() => setPlayerModal(false)}
+        title={editPlayerId ? 'Modifier le joueur' : 'Ajouter un joueur'} size="sm">
         <div className="space-y-4">
-          <Input
-            label="Nom du joueur"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-            placeholder="Ex: Alice"
-            onKeyDown={(e) => e.key === 'Enter' && submitPlayer()}
-            autoFocus
-          />
+          <Input label="Nom du joueur" value={playerName} onChange={(e) => setPlayerName(e.target.value)}
+            placeholder="Ex: Alice" onKeyDown={(e) => e.key === 'Enter' && submitPlayer()} autoFocus />
           <div className="flex gap-3 justify-end">
-            <Button variant="ghost" onClick={() => setPlayerModal(false)}>
-              Annuler
-            </Button>
+            <Button variant="ghost" onClick={() => setPlayerModal(false)}>Annuler</Button>
             <Button variant="primary" onClick={submitPlayer} disabled={!playerName.trim()}>
               {editPlayerId ? 'Enregistrer' : 'Ajouter'}
             </Button>
@@ -417,84 +322,51 @@ export default function HomePage() {
         </div>
       </Modal>
 
-      {/* Manage Members Modal */}
       {membersGroup && (
-        <Modal
-          isOpen={!!membersGroupId}
-          onClose={() => setMembersGroupId(null)}
-          title={`Membres — ${membersGroup.name}`}
-          size="sm"
-        >
+        <Modal isOpen={!!membersGroupId} onClose={() => setMembersGroupId(null)}
+          title={`Membres — ${membersGroup.name}`} size="sm">
           <div className="space-y-4">
             {players.length === 0 ? (
-              <p className="text-slate-400 text-sm">
-                Créez d'abord des joueurs dans la section "Joueurs".
-              </p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Créez d'abord des joueurs dans la section "Joueurs".</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {players.map((player) => {
                   const isMember = membersGroup.memberIds.includes(player.id);
                   return (
-                    <label
-                      key={player.id}
-                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-felt-800 transition-colors"
+                    <label key={player.id}
+                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors"
+                      style={{ background: isMember ? 'rgba(201,160,48,0.06)' : 'transparent' }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isMember}
+                      <input type="checkbox" checked={isMember}
                         onChange={() => {
-                          if (isMember) {
-                            dispatch({
-                              type: 'REMOVE_MEMBER',
-                              payload: { groupId: membersGroup.id, playerId: player.id },
-                            });
-                          } else {
-                            dispatch({
-                              type: 'ADD_MEMBER',
-                              payload: { groupId: membersGroup.id, playerId: player.id },
-                            });
-                          }
+                          if (isMember) dispatch({ type: 'REMOVE_MEMBER', payload: { groupId: membersGroup.id, playerId: player.id } });
+                          else dispatch({ type: 'ADD_MEMBER', payload: { groupId: membersGroup.id, playerId: player.id } });
                         }}
-                        className="w-4 h-4 accent-amber-500"
+                        className="w-4 h-4 accent-amber-500 flex-shrink-0"
                       />
-                      <span className="text-white text-sm font-medium">{player.name}</span>
+                      <span className="text-sm font-medium" style={{ color: 'var(--text-warm)' }}>{player.name}</span>
                     </label>
                   );
                 })}
               </div>
             )}
             <div className="flex justify-end">
-              <Button variant="primary" onClick={() => setMembersGroupId(null)}>
-                Terminé
-              </Button>
+              <Button variant="primary" onClick={() => setMembersGroupId(null)}>Terminé</Button>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* Delete Confirms */}
-      <ConfirmDialog
-        isOpen={!!deleteGroupId}
-        onClose={() => setDeleteGroupId(null)}
-        onConfirm={() => {
-          if (deleteGroupId) dispatch({ type: 'DELETE_GROUP', payload: { id: deleteGroupId } });
-          setDeleteGroupId(null);
-        }}
+      <ConfirmDialog isOpen={!!deleteGroupId} onClose={() => setDeleteGroupId(null)}
+        onConfirm={() => { if (deleteGroupId) dispatch({ type: 'DELETE_GROUP', payload: { id: deleteGroupId } }); setDeleteGroupId(null); }}
         title="Supprimer le groupe"
         message="Cette action supprimera le groupe et toutes ses parties. Cette action est irréversible."
-        confirmLabel="Supprimer"
-      />
-      <ConfirmDialog
-        isOpen={!!deletePlayerId}
-        onClose={() => setDeletePlayerId(null)}
-        onConfirm={() => {
-          if (deletePlayerId) dispatch({ type: 'DELETE_PLAYER', payload: { id: deletePlayerId } });
-          setDeletePlayerId(null);
-        }}
+        confirmLabel="Supprimer" />
+      <ConfirmDialog isOpen={!!deletePlayerId} onClose={() => setDeletePlayerId(null)}
+        onConfirm={() => { if (deletePlayerId) dispatch({ type: 'DELETE_PLAYER', payload: { id: deletePlayerId } }); setDeletePlayerId(null); }}
         title="Supprimer le joueur"
         message="Ce joueur sera retiré de tous les groupes et parties. Son historique sera perdu."
-        confirmLabel="Supprimer"
-      />
+        confirmLabel="Supprimer" />
     </div>
   );
 }
