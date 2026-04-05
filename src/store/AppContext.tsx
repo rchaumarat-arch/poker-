@@ -9,7 +9,7 @@ import { AppState, GameParticipant } from '../types';
 import { createDemoData } from '../utils/demoData';
 import { generateId } from '../utils/formatters';
 import { fetchPlayers, upsertPlayers, upsertPlayer, updatePlayer, deletePlayer } from '../lib/playersApi';
-import { fetchGroups, upsertGroups } from '../lib/groupsApi';
+import { fetchGroups, upsertGroups, upsertGroup, updateGroup, deleteGroup, addMember, removeMember } from '../lib/groupsApi';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'poker-tracker-v1';
@@ -28,7 +28,7 @@ type Action =
   | { type: 'ADD_PLAYER'; payload: { name: string; id?: string; createdAt?: string } }
   | { type: 'UPDATE_PLAYER'; payload: { id: string; name: string } }
   | { type: 'DELETE_PLAYER'; payload: { id: string } }
-  | { type: 'ADD_GROUP'; payload: { name: string; memberIds: string[] } }
+  | { type: 'ADD_GROUP'; payload: { name: string; memberIds: string[]; id?: string; createdAt?: string } }
   | { type: 'UPDATE_GROUP'; payload: { id: string; name: string } }
   | { type: 'DELETE_GROUP'; payload: { id: string } }
   | { type: 'ADD_MEMBER'; payload: { groupId: string; playerId: string } }
@@ -134,17 +134,13 @@ function reducer(state: AppState, action: Action): AppState {
     }
 
     case 'ADD_GROUP': {
-      const id = generateId();
+      const id = action.payload.id ?? generateId();
+      const createdAt = action.payload.createdAt ?? new Date().toISOString();
       return {
         ...state,
         groups: {
           ...state.groups,
-          [id]: {
-            id,
-            name: action.payload.name,
-            memberIds: action.payload.memberIds,
-            createdAt: new Date().toISOString(),
-          },
+          [id]: { id, name: action.payload.name, memberIds: action.payload.memberIds, createdAt },
         },
       };
     }
@@ -493,6 +489,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dispatch(action);
       deletePlayer(action.payload.id).then((ok) => {
         if (!ok) console.warn('[AppContext] DELETE_PLAYER sync failed — local state preserved', { id: action.payload.id });
+      });
+    } else if (action.type === 'ADD_GROUP') {
+      const id = action.payload.id ?? generateId();
+      const createdAt = action.payload.createdAt ?? new Date().toISOString();
+      const enriched: Action = { type: 'ADD_GROUP', payload: { ...action.payload, id, createdAt } };
+      dispatch(enriched);
+      upsertGroup({ id, name: action.payload.name, memberIds: action.payload.memberIds, createdAt }, user.id).then((ok) => {
+        if (!ok) console.warn('[AppContext] ADD_GROUP sync failed — local state preserved', { id });
+      });
+    } else if (action.type === 'UPDATE_GROUP') {
+      dispatch(action);
+      updateGroup(action.payload.id, action.payload.name).then((ok) => {
+        if (!ok) console.warn('[AppContext] UPDATE_GROUP sync failed — local state preserved', { id: action.payload.id });
+      });
+    } else if (action.type === 'DELETE_GROUP') {
+      dispatch(action);
+      deleteGroup(action.payload.id).then((ok) => {
+        if (!ok) console.warn('[AppContext] DELETE_GROUP sync failed — local state preserved', { id: action.payload.id });
+      });
+    } else if (action.type === 'ADD_MEMBER') {
+      dispatch(action);
+      addMember(action.payload.groupId, action.payload.playerId).then((ok) => {
+        if (!ok) console.warn('[AppContext] ADD_MEMBER sync failed — local state preserved', action.payload);
+      });
+    } else if (action.type === 'REMOVE_MEMBER') {
+      dispatch(action);
+      removeMember(action.payload.groupId, action.payload.playerId).then((ok) => {
+        if (!ok) console.warn('[AppContext] REMOVE_MEMBER sync failed — local state preserved', action.payload);
       });
     } else {
       dispatch(action);

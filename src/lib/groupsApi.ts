@@ -38,7 +38,6 @@ export async function upsertGroups(
 ): Promise<boolean> {
   if (groups.length === 0) return true;
 
-  // 1. Upsert les groupes
   const groupRows = groups.map((g) => ({
     id: g.id,
     user_id: userId,
@@ -52,7 +51,6 @@ export async function upsertGroups(
     return false;
   }
 
-  // 2. Upsert les members — en filtrant les playerIds absents de Supabase
   const memberRows: { group_id: string; player_id: string }[] = [];
 
   for (const g of groups) {
@@ -70,14 +68,67 @@ export async function upsertGroups(
 
   if (memberRows.length === 0) return true;
 
-  const { error: memberError } = await supabase
-    .from('group_members')
-    .upsert(memberRows);
-
+  const { error: memberError } = await supabase.from('group_members').upsert(memberRows);
   if (memberError) {
     console.error('[groupsApi] upsertGroups (group_members):', memberError.message);
     return false;
   }
 
+  return true;
+}
+
+export async function upsertGroup(group: Group, userId: string): Promise<boolean> {
+  const { error } = await supabase.from('groups').upsert({
+    id: group.id,
+    user_id: userId,
+    name: group.name,
+    created_at: group.createdAt,
+  });
+  if (error) {
+    console.error('[groupsApi] upsertGroup:', error.message, { groupId: group.id });
+    return false;
+  }
+  return true;
+}
+
+export async function updateGroup(id: string, name: string): Promise<boolean> {
+  const { error } = await supabase.from('groups').update({ name }).eq('id', id);
+  if (error) {
+    console.error('[groupsApi] updateGroup:', error.message, { groupId: id });
+    return false;
+  }
+  return true;
+}
+
+export async function deleteGroup(id: string): Promise<boolean> {
+  const { error } = await supabase.from('groups').delete().eq('id', id);
+  if (error) {
+    console.error('[groupsApi] deleteGroup:', error.message, { groupId: id });
+    return false;
+  }
+  return true;
+}
+
+export async function addMember(groupId: string, playerId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('group_members')
+    .insert({ group_id: groupId, player_id: playerId });
+  if (error) {
+    console.error('[groupsApi] addMember:', error.message, { groupId, playerId });
+    return false;
+  }
+  return true;
+}
+
+export async function removeMember(groupId: string, playerId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('player_id', playerId);
+  if (error) {
+    console.error('[groupsApi] removeMember:', error.message, { groupId, playerId });
+    return false;
+  }
   return true;
 }
