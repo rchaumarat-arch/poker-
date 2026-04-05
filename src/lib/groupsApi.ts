@@ -110,9 +110,16 @@ export async function deleteGroup(id: string): Promise<boolean> {
 }
 
 export async function addMember(groupId: string, playerId: string): Promise<boolean> {
+  // upsert avec ignoreDuplicates : si la paire (group_id, player_id) existe déjà
+  // (contrainte PK), Supabase l'ignore silencieusement sans retourner d'erreur.
+  // Nécessaire car le reducer bloque les doublons localement, mais dispatchWithSync
+  // appelle cette fonction sans pouvoir vérifier l'état courant (closure stale).
   const { error } = await supabase
     .from('group_members')
-    .insert({ group_id: groupId, player_id: playerId });
+    .upsert(
+      { group_id: groupId, player_id: playerId },
+      { onConflict: 'group_id,player_id', ignoreDuplicates: true }
+    );
   if (error) {
     console.error('[groupsApi] addMember:', error.message, { groupId, playerId });
     return false;
