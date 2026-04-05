@@ -443,13 +443,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const createdAt = action.payload.createdAt ?? new Date().toISOString();
       const enriched: Action = { type: 'ADD_PLAYER', payload: { ...action.payload, id, createdAt } };
       dispatch(enriched);
-      upsertPlayer({ id, name: action.payload.name, createdAt }, user.id);
+      upsertPlayer({ id, name: action.payload.name, createdAt }, user.id).then((ok) => {
+        if (!ok) console.warn('[AppContext] ADD_PLAYER sync failed — local state preserved', { id });
+      });
     } else if (action.type === 'UPDATE_PLAYER') {
       dispatch(action);
-      updatePlayer(action.payload.id, action.payload.name);
+      updatePlayer(action.payload.id, action.payload.name).then((ok) => {
+        if (!ok) console.warn('[AppContext] UPDATE_PLAYER sync failed — local state preserved', { id: action.payload.id });
+      });
     } else if (action.type === 'DELETE_PLAYER') {
       dispatch(action);
-      deletePlayer(action.payload.id);
+      deletePlayer(action.payload.id).then((ok) => {
+        if (!ok) console.warn('[AppContext] DELETE_PLAYER sync failed — local state preserved', { id: action.payload.id });
+      });
     } else {
       dispatch(action);
     }

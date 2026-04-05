@@ -18,7 +18,10 @@ export async function fetchPlayers(): Promise<Player[] | null> {
     .select('id, user_id, name, created_at')
     .order('created_at');
 
-  if (error) return null;
+  if (error) {
+    console.error('[playersApi] fetchPlayers:', error.message);
+    return null;
+  }
   return (data as DbPlayer[]).map(toPlayer);
 }
 
@@ -31,7 +34,11 @@ export async function upsertPlayers(players: Player[], userId: string): Promise<
   }));
 
   const { error } = await supabase.from('players').upsert(rows);
-  return !error;
+  if (error) {
+    console.error('[playersApi] upsertPlayers:', error.message);
+    return false;
+  }
+  return true;
 }
 
 export async function upsertPlayer(player: Player, userId: string): Promise<boolean> {
@@ -41,7 +48,11 @@ export async function upsertPlayer(player: Player, userId: string): Promise<bool
     name: player.name,
     created_at: player.createdAt,
   });
-  return !error;
+  if (error) {
+    console.error('[playersApi] upsertPlayer:', error.message, { playerId: player.id });
+    return false;
+  }
+  return true;
 }
 
 export async function updatePlayer(id: string, name: string): Promise<boolean> {
@@ -49,7 +60,11 @@ export async function updatePlayer(id: string, name: string): Promise<boolean> {
     .from('players')
     .update({ name })
     .eq('id', id);
-  return !error;
+  if (error) {
+    console.error('[playersApi] updatePlayer:', error.message, { playerId: id });
+    return false;
+  }
+  return true;
 }
 
 export async function deletePlayer(id: string): Promise<boolean> {
@@ -57,5 +72,9 @@ export async function deletePlayer(id: string): Promise<boolean> {
     .from('players')
     .delete()
     .eq('id', id);
-  return !error;
+  if (error) {
+    console.error('[playersApi] deletePlayer:', error.message, { playerId: id });
+    return false;
+  }
+  return true;
 }
