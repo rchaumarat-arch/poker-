@@ -232,7 +232,7 @@ export default function GroupPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to="/" className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+        <Link to="/" className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-felt-800 transition-colors">
           <ChevronLeftIcon />
         </Link>
         <div className="flex-1 min-w-0">
@@ -242,16 +242,21 @@ export default function GroupPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-900 rounded-2xl p-1">
+      <div className="flex gap-1 rounded-2xl p-1" style={{ background: '#081510', border: '1px solid rgba(201,144,48,0.12)' }}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
               activeTab === tab.id
-                ? 'bg-slate-700 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-200'
             }`}
+            style={activeTab === tab.id ? {
+              background: 'rgba(201, 144, 48, 0.15)',
+              border: '1px solid rgba(201, 144, 48, 0.3)',
+              color: '#e8b94a',
+            } : undefined}
           >
             {tab.label}
           </button>
@@ -286,7 +291,12 @@ export default function GroupPage() {
                 return (
                   <div
                     key={game.id}
-                    className="bg-slate-900 border border-slate-800 rounded-2xl p-4 hover:border-slate-700 transition-colors"
+                    className="rounded-2xl p-4 transition-all hover:brightness-110"
+                    style={{
+                      background: 'linear-gradient(135deg, #0e2018 0%, #081510 100%)',
+                      border: '1px solid rgba(201, 144, 48, 0.15)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                    }}
                   >
                     <div className="flex items-center gap-3">
                       <button
@@ -294,14 +304,17 @@ export default function GroupPage() {
                         onClick={() => navigate(`/games/${game.id}`)}
                       >
                         <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            isFinished
-                              ? 'bg-emerald-500/10 border border-emerald-500/30'
-                              : 'bg-amber-500/10 border border-amber-500/30'
-                          }`}
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0`}
+                          style={isFinished ? {
+                            background: 'rgba(201, 144, 48, 0.1)',
+                            border: '1px solid rgba(201, 144, 48, 0.3)',
+                          } : {
+                            background: 'rgba(251, 191, 36, 0.1)',
+                            border: '1px solid rgba(251, 191, 36, 0.3)',
+                          }}
                         >
                           {isFinished ? (
-                            <CheckIcon />
+                            <span style={{ color: '#e8b94a' }}><CheckIcon /></span>
                           ) : (
                             <span className="text-amber-400 text-xs font-bold">EN</span>
                           )}
@@ -325,7 +338,7 @@ export default function GroupPage() {
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <button
                           onClick={() => openEditGame(game.id)}
-                          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-felt-800 transition-colors"
                         >
                           <EditIcon />
                         </button>
@@ -337,7 +350,7 @@ export default function GroupPage() {
                         </button>
                         <button
                           onClick={() => navigate(`/games/${game.id}`)}
-                          className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
+                          className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-felt-800 transition-colors"
                         >
                           <ChevronRightIcon />
                         </button>
@@ -372,18 +385,26 @@ export default function GroupPage() {
                     return (
                       <div
                         key={stats.playerId}
-                        className="bg-slate-900 border border-slate-800 rounded-2xl p-4"
+                        className="rounded-2xl p-4"
+                        style={{
+                          background: 'linear-gradient(135deg, #0e2018 0%, #081510 100%)',
+                          border: isPositive
+                            ? '1px solid rgba(201, 144, 48, 0.25)'
+                            : isNegative
+                            ? '1px solid rgba(239, 68, 68, 0.2)'
+                            : '1px solid rgba(201, 144, 48, 0.1)',
+                        }}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
                             <div
                               className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold ${
-                                isPositive
-                                  ? 'bg-emerald-500/15 text-emerald-400'
-                                  : isNegative
-                                  ? 'bg-red-500/15 text-red-400'
-                                  : 'bg-slate-700 text-slate-400'
+                                isNegative ? 'bg-red-500/15 text-red-400' : 'bg-slate-700 text-slate-400'
                               }`}
+                              style={isPositive ? {
+                                background: 'rgba(201, 144, 48, 0.15)',
+                                color: '#e8b94a',
+                              } : undefined}
                             >
                               {player.name.charAt(0).toUpperCase()}
                             </div>
@@ -403,12 +424,9 @@ export default function GroupPage() {
                             <div className="text-right">
                               <p
                                 className={`font-bold font-mono text-sm ${
-                                  isPositive
-                                    ? 'text-emerald-400'
-                                    : isNegative
-                                    ? 'text-red-400'
-                                    : 'text-slate-400'
+                                  isNegative ? 'text-red-400' : isSettled ? 'text-slate-400' : ''
                                 }`}
+                                style={isPositive ? { color: '#e8b94a' } : undefined}
                               >
                                 {formatBalanceSign(stats.currentBalance)}
                               </p>
@@ -429,7 +447,7 @@ export default function GroupPage() {
                         </div>
 
                         {/* Breakdown */}
-                        <div className="mt-3 pt-3 border-t border-slate-800 grid grid-cols-3 gap-2 text-xs">
+                        <div className="mt-3 pt-3 grid grid-cols-3 gap-2 text-xs" style={{ borderTop: '1px solid rgba(201,144,48,0.1)' }}>
                           <div>
                             <p className="text-slate-500">Misé</p>
                             <p className="text-white font-mono font-medium">
@@ -446,12 +464,9 @@ export default function GroupPage() {
                             <p className="text-slate-500">Bilan net</p>
                             <p
                               className={`font-mono font-medium ${
-                                stats.netBalance > 0
-                                  ? 'text-emerald-400'
-                                  : stats.netBalance < 0
-                                  ? 'text-red-400'
-                                  : 'text-slate-400'
+                                stats.netBalance < 0 ? 'text-red-400' : stats.netBalance === 0 ? 'text-slate-400' : ''
                               }`}
+                              style={stats.netBalance > 0 ? { color: '#e8b94a' } : undefined}
                             >
                               {formatBalanceSign(stats.netBalance)}
                             </p>
@@ -481,18 +496,25 @@ export default function GroupPage() {
                   return (
                     <div
                       key={i}
-                      className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-3"
+                      className="rounded-xl p-3 flex items-center gap-3"
+                      style={{
+                        background: '#0e2018',
+                        border: '1px solid rgba(201, 144, 48, 0.15)',
+                      }}
                     >
                       <div className="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center text-xs font-bold text-red-400 flex-shrink-0">
                         {from.name.charAt(0)}
                       </div>
                       <span className="text-slate-300 text-sm font-medium">{from.name}</span>
                       <ArrowRightIcon />
-                      <span className="font-bold font-mono text-emerald-400 text-sm">
+                      <span className="font-bold font-mono text-sm" style={{ color: '#e8b94a' }}>
                         {formatCurrencyCompact(t.amount)}
                       </span>
                       <ArrowRightIcon />
-                      <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center text-xs font-bold text-emerald-400 flex-shrink-0">
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ background: 'rgba(201,144,48,0.15)', color: '#e8b94a' }}
+                      >
                         {to.name.charAt(0)}
                       </div>
                       <span className="text-slate-300 text-sm font-medium">{to.name}</span>
@@ -504,8 +526,8 @@ export default function GroupPage() {
           )}
 
           {cumulativeTransfers.length === 0 && memberStats.length > 0 && (
-            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 text-center">
-              <p className="text-emerald-400 font-medium text-sm">✓ Tous les comptes sont soldés</p>
+            <div className="rounded-2xl p-4 text-center" style={{ background: 'rgba(201,144,48,0.05)', border: '1px solid rgba(201,144,48,0.2)' }}>
+              <p className="font-medium text-sm" style={{ color: '#e8b94a' }}>✓ Tous les comptes sont soldés</p>
             </div>
           )}
         </div>
@@ -523,11 +545,16 @@ export default function GroupPage() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setFilterPlayerId('')}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  filterPlayerId === ''
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
-                }`}
+                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                style={filterPlayerId === '' ? {
+                  background: 'rgba(201,144,48,0.2)',
+                  border: '1px solid rgba(201,144,48,0.4)',
+                  color: '#e8b94a',
+                } : {
+                  background: '#0e2018',
+                  border: '1px solid rgba(201,144,48,0.1)',
+                  color: '#94a3b8',
+                }}
               >
                 Tous
               </button>
@@ -535,11 +562,16 @@ export default function GroupPage() {
                 <button
                   key={p.id}
                   onClick={() => setFilterPlayerId(p.id === filterPlayerId ? '' : p.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    filterPlayerId === p.id
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                  style={filterPlayerId === p.id ? {
+                    background: 'rgba(201,144,48,0.2)',
+                    border: '1px solid rgba(201,144,48,0.4)',
+                    color: '#e8b94a',
+                  } : {
+                    background: '#0e2018',
+                    border: '1px solid rgba(201,144,48,0.1)',
+                    color: '#94a3b8',
+                  }}
                 >
                   {p.name}
                 </button>
@@ -562,15 +594,19 @@ export default function GroupPage() {
                 return (
                   <div
                     key={settlement.id}
-                    className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-3"
+                    className="rounded-xl p-3 flex items-center gap-3"
+                    style={{ background: '#0e2018', border: '1px solid rgba(201,144,48,0.12)' }}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-xs font-bold text-emerald-400 flex-shrink-0">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                      style={{ background: 'rgba(201,144,48,0.12)', color: '#e8b94a' }}
+                    >
                       {player.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-white">{player.name}</span>
-                        <Badge variant="success">
+                        <Badge variant="gold">
                           <CheckIcon />
                           Réglé
                         </Badge>
@@ -580,9 +616,8 @@ export default function GroupPage() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p
-                        className={`text-sm font-bold font-mono ${
-                          settlement.settledBalance > 0 ? 'text-emerald-400' : 'text-red-400'
-                        }`}
+                        className={`text-sm font-bold font-mono ${settlement.settledBalance < 0 ? 'text-red-400' : ''}`}
+                        style={settlement.settledBalance > 0 ? { color: '#e8b94a' } : undefined}
                       >
                         {formatBalanceSign(settlement.settledBalance)}
                       </p>
@@ -634,7 +669,7 @@ export default function GroupPage() {
                 type="checkbox"
                 checked={updateExistingBuyIn}
                 onChange={(e) => setUpdateExistingBuyIn(e.target.checked)}
-                className="w-4 h-4 accent-emerald-500 flex-shrink-0"
+                className="w-4 h-4 accent-amber-500 flex-shrink-0"
               />
               <span className="text-sm text-slate-300 group-hover:text-white transition-colors">
                 Mettre à jour la mise de tous les joueurs existants
@@ -648,7 +683,7 @@ export default function GroupPage() {
             {members.length === 0 ? (
               <p className="text-slate-500 text-sm">
                 Aucun membre dans ce groupe.{' '}
-                <Link to="/" className="text-emerald-400 underline">
+                <Link to="/" className="underline" style={{ color: '#e8b94a' }}>
                   Gérer les membres →
                 </Link>
               </p>
@@ -659,7 +694,7 @@ export default function GroupPage() {
                   return (
                     <label
                       key={player.id}
-                      className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors"
+                      className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-felt-800 transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -670,7 +705,7 @@ export default function GroupPage() {
                           else next.add(player.id);
                           setSelectedPlayers(next);
                         }}
-                        className="w-4 h-4 accent-emerald-500"
+                        className="w-4 h-4 accent-amber-500"
                       />
                       <span className="text-white text-sm">{player.name}</span>
                     </label>
@@ -722,17 +757,19 @@ export default function GroupPage() {
         {settlingStats && (
           <div className="space-y-4">
             <div
-              className={`p-4 rounded-xl border ${
-                settlingStats.currentBalance > 0
-                  ? 'bg-emerald-500/10 border-emerald-500/30'
-                  : 'bg-red-500/10 border-red-500/30'
-              }`}
+              className="p-4 rounded-xl"
+              style={settlingStats.currentBalance > 0 ? {
+                background: 'rgba(201,144,48,0.08)',
+                border: '1px solid rgba(201,144,48,0.3)',
+              } : {
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.25)',
+              }}
             >
               <p className="text-sm text-slate-300">Solde actuel à régler</p>
               <p
-                className={`text-2xl font-bold font-mono mt-1 ${
-                  settlingStats.currentBalance > 0 ? 'text-emerald-400' : 'text-red-400'
-                }`}
+                className={`text-2xl font-bold font-mono mt-1 ${settlingStats.currentBalance < 0 ? 'text-red-400' : ''}`}
+                style={settlingStats.currentBalance > 0 ? { color: '#e8b94a' } : undefined}
               >
                 {formatBalanceSign(settlingStats.currentBalance)}
               </p>

@@ -10,18 +10,35 @@ export function Layout({ children }: LayoutProps) {
   const isHome = location.pathname === '/';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800">
+    <div className="min-h-screen text-white">
+      <header className="sticky top-0 z-40 backdrop-blur-md border-b" style={{
+        background: 'rgba(5, 16, 13, 0.92)',
+        borderColor: 'rgba(201, 144, 48, 0.2)',
+      }}>
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center group-hover:bg-emerald-500/30 transition-colors">
-              <span className="text-emerald-400 text-base leading-none">♠</span>
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-105"
+              style={{
+                background: 'rgba(201, 144, 48, 0.15)',
+                border: '1px solid rgba(201, 144, 48, 0.4)',
+                boxShadow: '0 0 12px rgba(201, 144, 48, 0.1)',
+              }}
+            >
+              <span className="text-base leading-none" style={{ color: '#e8b94a' }}>♠</span>
             </div>
             <span className="font-bold text-white text-base tracking-tight">Poker Tracker</span>
           </Link>
           {!isHome && (
             <div className="flex-1 flex items-center">
-              <div className="w-px h-5 bg-slate-700 mx-1" />
+              <div className="w-px h-5 mx-1" style={{ background: 'rgba(201, 144, 48, 0.2)' }} />
+            </div>
+          )}
+          {isHome && (
+            <div className="flex-1 flex items-center justify-end gap-3">
+              <span className="text-xs tracking-widest opacity-30 select-none hidden sm:block" style={{ color: '#e8b94a' }}>
+                ♠ ♥ ♦ ♣
+              </span>
             </div>
           )}
         </div>

@@ -34,15 +34,18 @@ export function Input({
         <input
           id={inputId}
           className={`
-            w-full bg-slate-800 border rounded-xl text-white placeholder-slate-500
-            focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent
+            w-full rounded-xl text-white placeholder-slate-500
+            focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent
             transition-colors text-sm
             ${prefix ? 'pl-8' : 'pl-3.5'}
             ${suffix ? 'pr-10' : 'pr-3.5'}
             py-2.5
-            ${error ? 'border-red-500' : 'border-slate-700 hover:border-slate-600'}
             ${className}
           `}
+          style={{
+            background: '#0e2018',
+            border: error ? '1px solid rgb(239,68,68)' : '1px solid rgba(201,144,48,0.2)',
+          }}
           {...props}
         />
         {suffix && (

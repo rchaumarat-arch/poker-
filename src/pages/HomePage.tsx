@@ -162,7 +162,7 @@ export default function HomePage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Mes groupes</h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             Gérez vos groupes de poker et l'historique des parties
           </p>
         </div>
@@ -174,7 +174,7 @@ export default function HomePage() {
       {/* Groups */}
       {groups.length === 0 ? (
         <div className="text-center py-16 space-y-3">
-          <div className="text-5xl">♠</div>
+          <div className="text-5xl" style={{ color: '#e8b94a' }}>♠</div>
           <p className="text-slate-400">Aucun groupe pour l'instant.</p>
           <Button variant="primary" icon={<PlusIcon />} onClick={openCreateGroup}>
             Créer votre premier groupe
@@ -187,15 +187,26 @@ export default function HomePage() {
             return (
               <div
                 key={group.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-4 hover:border-slate-700 transition-colors"
+                className="rounded-2xl p-4 transition-all hover:brightness-110"
+                style={{
+                  background: 'linear-gradient(135deg, #0e2018 0%, #081510 100%)',
+                  border: '1px solid rgba(201, 144, 48, 0.18)',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+                }}
               >
                 <div className="flex items-center gap-3">
                   <button
                     className="flex-1 flex items-center gap-3 text-left min-w-0"
                     onClick={() => navigate(`/groups/${group.id}`)}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
-                      <span className="text-emerald-400 font-bold text-base">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: 'rgba(201, 144, 48, 0.12)',
+                        border: '1px solid rgba(201, 144, 48, 0.3)',
+                      }}
+                    >
+                      <span className="font-bold text-base" style={{ color: '#e8b94a' }}>
                         {group.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -283,7 +294,11 @@ export default function HomePage() {
               return (
                 <div
                   key={player.id}
-                  className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2"
+                  className="rounded-xl p-3 flex items-center justify-between gap-2"
+                  style={{
+                    background: '#0e2018',
+                    border: '1px solid rgba(201, 144, 48, 0.12)',
+                  }}
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-white text-sm truncate">{player.name}</p>
@@ -313,7 +328,7 @@ export default function HomePage() {
       </div>
 
       {/* Data Management */}
-      <div className="border-t border-slate-800 pt-6 space-y-3">
+      <div className="pt-6 space-y-3" style={{ borderTop: '1px solid rgba(201, 144, 48, 0.12)' }}>
         <h2 className="text-sm font-medium text-slate-400">Données</h2>
         <div className="flex flex-wrap gap-2">
           <Button variant="ghost" size="sm" icon={<DownloadIcon />} onClick={exportData}>
@@ -422,7 +437,7 @@ export default function HomePage() {
                   return (
                     <label
                       key={player.id}
-                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors"
+                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-felt-800 transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -440,7 +455,7 @@ export default function HomePage() {
                             });
                           }
                         }}
-                        className="w-4 h-4 accent-emerald-500"
+                        className="w-4 h-4 accent-amber-500"
                       />
                       <span className="text-white text-sm font-medium">{player.name}</span>
                     </label>

@@ -188,7 +188,7 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
   const ghostLabel = dragIndex !== null ? (RANK_LABELS[dragIndex] ?? `${dragIndex + 1}.`) : '';
 
   return (
-    <div className="bg-slate-900 border border-emerald-500/25 rounded-2xl p-4 space-y-4">
+    <div className="rounded-2xl p-4 space-y-4" style={{ background: 'linear-gradient(135deg, #0e2018 0%, #081510 100%)', border: '1px solid rgba(201,144,48,0.25)', boxShadow: '0 4px 16px rgba(201,144,48,0.08)' }}>
       <p className="text-sm font-semibold text-white">Distribution automatique</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -217,8 +217,8 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
                       : 'cursor-grab active:cursor-grabbing',
                     // Drop target: visual highlight
                     isDropTarget
-                      ? 'bg-slate-700 ring-2 ring-emerald-500 scale-[1.02]'
-                      : 'bg-slate-800 hover:bg-slate-750',
+                      ? 'bg-felt-700 ring-2 ring-amber-400 scale-[1.02]'
+                      : 'bg-felt-800 hover:bg-felt-700',
                   ].join(' ')}
                   onPointerDown={(e) => handlePointerDown(e, i)}
                   onPointerMove={handlePointerMove}
@@ -263,7 +263,8 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
             <select
               value={rule}
               onChange={(e) => setRule(e.target.value as DistributionRule)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl text-white text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer"
+              className="w-full border rounded-xl text-white text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 appearance-none cursor-pointer"
+              style={{ background: '#0e2018', borderColor: 'rgba(201,144,48,0.2)' }}
             >
               {DIST_RULES.map((r) => (
                 <option key={r.value} value={r.value}>
@@ -293,13 +294,14 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
                         next[i] = parseFloat(e.target.value) || 0;
                         setCustomPcts(next);
                       }}
-                      className="w-16 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-16 rounded-lg text-white text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      style={{ background: '#163020', border: '1px solid rgba(201,144,48,0.2)' }}
                     />
                     <span className="text-xs text-slate-500">%</span>
                   </div>
                 );
               })}
-              <p className={`text-xs font-medium ${customOk ? 'text-emerald-400' : 'text-amber-400'}`}>
+              <p className={`text-xs font-medium`} style={{ color: customOk ? '#e8b94a' : '#fb923c' }}>
                 Total : {Math.round(customTotal * 100) / 100}%
                 {!customOk && ' ≠ 100%'}
               </p>
@@ -317,9 +319,8 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
                   <div key={playerId} className="flex items-center justify-between">
                     <span className="text-xs text-slate-300">{player.name}</span>
                     <span
-                      className={`text-xs font-mono font-semibold ${
-                        amount > 0 ? 'text-emerald-400' : 'text-slate-500'
-                      }`}
+                      className={`text-xs font-mono font-semibold ${amount === 0 ? 'text-slate-500' : ''}`}
+                      style={amount > 0 ? { color: '#e8b94a' } : undefined}
                     >
                       {formatCurrencyCompact(amount)}
                     </span>
@@ -343,8 +344,8 @@ function DistributionPanel({ participantIds, players, totalPot, onApply }: Distr
       {/* Ghost: follows cursor during drag — position updated imperatively for 60fps smoothness */}
       <div
         ref={ghostRef}
-        style={{ display: 'none', position: 'fixed', zIndex: 9999, pointerEvents: 'none' }}
-        className="items-center gap-2 rounded-xl px-3 py-2.5 bg-slate-600 shadow-2xl shadow-black/70 ring-2 ring-emerald-400"
+        style={{ display: 'none', position: 'fixed', zIndex: 9999, pointerEvents: 'none', background: '#163020', border: '2px solid rgba(232,185,74,0.7)', boxShadow: '0 8px 32px rgba(0,0,0,0.7), 0 0 12px rgba(201,144,48,0.2)' }}
+        className="items-center gap-2 rounded-xl px-3 py-2.5"
       >
         <span className="text-sm w-6 text-center leading-none flex-shrink-0 text-slate-200">
           {ghostLabel}
@@ -456,35 +457,38 @@ function ParticipantCard({
     }
   }
 
+  const cardBorder = isFinished && netGain !== null
+    ? netGain > 0
+      ? 'rgba(201, 144, 48, 0.35)'
+      : netGain < 0
+      ? 'rgba(239, 68, 68, 0.25)'
+      : 'rgba(201, 144, 48, 0.1)'
+    : 'rgba(201, 144, 48, 0.12)';
+
   return (
-    <div className={`bg-slate-900 border rounded-2xl overflow-hidden transition-colors ${
-      isFinished
-        ? netGain !== null && netGain > 0
-          ? 'border-emerald-500/30'
-          : netGain !== null && netGain < 0
-          ? 'border-red-500/30'
-          : 'border-slate-700'
-        : 'border-slate-800'
-    }`}>
+    <div
+      className="rounded-2xl overflow-hidden transition-all"
+      style={{
+        background: 'linear-gradient(160deg, #0e2018 0%, #081510 100%)',
+        border: `1px solid ${cardBorder}`,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800">
+      <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgba(201,144,48,0.1)' }}>
         <div
           className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-            netGain !== null && netGain > 0
-              ? 'bg-emerald-500/15 text-emerald-400'
-              : netGain !== null && netGain < 0
-              ? 'bg-red-500/15 text-red-400'
-              : 'bg-slate-700 text-slate-300'
+            netGain !== null && netGain < 0 ? 'bg-red-500/15 text-red-400' : 'bg-felt-700 text-slate-300'
           }`}
+          style={netGain !== null && netGain > 0 ? { background: 'rgba(201,144,48,0.15)', color: '#e8b94a' } : undefined}
         >
           {playerName.charAt(0).toUpperCase()}
         </div>
         <span className="flex-1 font-semibold text-white">{playerName}</span>
         {netGain !== null && (
           <span
-            className={`font-bold font-mono text-sm ${
-              netGain > 0 ? 'text-emerald-400' : netGain < 0 ? 'text-red-400' : 'text-slate-400'
-            }`}
+            className={`font-bold font-mono text-sm ${netGain < 0 ? 'text-red-400' : netGain === 0 ? 'text-slate-400' : ''}`}
+            style={netGain > 0 ? { color: '#e8b94a' } : undefined}
           >
             {formatBalanceSign(netGain)}
           </span>
@@ -519,7 +523,8 @@ function ParticipantCard({
                   onChange={(e) => setBuyInValue(e.target.value)}
                   onBlur={(e) => commitBuyIn(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && commitBuyIn(buyInValue)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl text-white text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full rounded-xl text-white text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  style={{ background: '#0e2018', border: '1px solid rgba(201,144,48,0.2)' }}
                 />
                 <span className="absolute right-3 text-slate-400 text-xs">€</span>
               </div>
@@ -542,7 +547,8 @@ function ParticipantCard({
             {!isFinished && (
               <button
                 onClick={() => setShowAddRebuy(!showAddRebuy)}
-                className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium"
+                className="text-xs flex items-center gap-1 font-medium hover:brightness-110"
+              style={{ color: '#e8b94a' }}
               >
                 <PlusIcon />
                 Recave
@@ -555,7 +561,8 @@ function ParticipantCard({
               {participant.rebuys.map((rebuy) => (
                 <div
                   key={rebuy.id}
-                  className="flex items-center gap-1.5 bg-slate-800 rounded-lg px-2 py-1"
+                  className="flex items-center gap-1.5 rounded-lg px-2 py-1"
+                  style={{ background: '#163020', border: '1px solid rgba(201,144,48,0.15)' }}
                 >
                   {isFinished ? (
                     <span className="text-xs text-amber-400 font-mono font-medium">
@@ -606,7 +613,8 @@ function ParticipantCard({
                   value={newRebuyValue}
                   onChange={(e) => setNewRebuyValue(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addRebuy()}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl text-white text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-xl text-white text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  style={{ background: '#0e2018', border: '1px solid rgba(201,144,48,0.2)' }}
                   autoFocus
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">€</span>
@@ -630,7 +638,7 @@ function ParticipantCard({
 
         {/* Final Amount */}
         {(showFinalAmount || isFinished) && (
-          <div className="pt-3 border-t border-slate-800">
+          <div className="pt-3" style={{ borderTop: '1px solid rgba(201,144,48,0.1)' }}>
             <div className="grid grid-cols-2 gap-3 items-end">
               <div>
                 <p className="text-xs text-slate-500 mb-1.5">Montant récupéré</p>
@@ -651,7 +659,8 @@ function ParticipantCard({
                       onBlur={(e) => commitFinalAmount(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && commitFinalAmount(finalValue)}
                       placeholder="0"
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl text-white text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      className="w-full rounded-xl text-white text-sm px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  style={{ background: '#0e2018', border: '1px solid rgba(201,144,48,0.2)' }}
                     />
                     <span className="absolute right-3 text-slate-400 text-xs">€</span>
                   </div>
@@ -661,13 +670,8 @@ function ParticipantCard({
                 <p className="text-xs text-slate-500 mb-1.5">Gain / Perte</p>
                 {netGain !== null ? (
                   <p
-                    className={`font-mono font-bold ${
-                      netGain > 0
-                        ? 'text-emerald-400'
-                        : netGain < 0
-                        ? 'text-red-400'
-                        : 'text-slate-400'
-                    }`}
+                    className={`font-mono font-bold ${netGain < 0 ? 'text-red-400' : netGain === 0 ? 'text-slate-400' : ''}`}
+                    style={netGain > 0 ? { color: '#e8b94a' } : undefined}
                   >
                     {formatBalanceSign(netGain)}
                   </p>
@@ -794,7 +798,7 @@ export default function GamePage() {
       <div className="flex items-start gap-3">
         <Link
           to={group ? `/groups/${group.id}` : '/'}
-          className="mt-0.5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0"
+          className="mt-0.5 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-felt-800 transition-colors flex-shrink-0"
         >
           <ChevronLeftIcon />
         </Link>
@@ -823,14 +827,17 @@ export default function GamePage() {
       </div>
 
       {/* Summary Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 grid grid-cols-3 gap-4">
+      <div
+        className="rounded-2xl p-4 grid grid-cols-3 gap-4"
+        style={{ background: 'linear-gradient(135deg, #0e2018 0%, #081510 100%)', border: '1px solid rgba(201,144,48,0.18)' }}
+      >
         <div className="text-center">
           <p className="text-xs text-slate-500 mb-1">Total misé</p>
           <p className="font-bold font-mono text-white text-base">
             {formatCurrencyCompact(totalInvested)}
           </p>
         </div>
-        <div className="text-center border-x border-slate-800">
+        <div className="text-center" style={{ borderLeft: '1px solid rgba(201,144,48,0.12)', borderRight: '1px solid rgba(201,144,48,0.12)' }}>
           <p className="text-xs text-slate-500 mb-1">Redistribué</p>
           <p className="font-bold font-mono text-white text-base">
             {formatCurrencyCompact(totalRecovered)}
@@ -840,9 +847,8 @@ export default function GamePage() {
           <p className="text-xs text-slate-500 mb-1">Balance</p>
           {allFinalsFilled ? (
             <p
-              className={`font-bold font-mono text-base ${
-                balanced ? 'text-emerald-400' : 'text-red-400'
-              }`}
+              className={`font-bold font-mono text-base ${!balanced ? 'text-red-400' : ''}`}
+              style={balanced ? { color: '#e8b94a' } : undefined}
             >
               {balanced ? '✓ OK' : formatBalanceSign(imbalance)}
             </p>
@@ -978,11 +984,11 @@ export default function GamePage() {
       {isFinished && (
         <div className="space-y-5 pt-2">
           {/* Leaderboard */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-800">
-              <h2 className="font-semibold text-white">Résultats de la partie</h2>
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(160deg, #0e2018 0%, #081510 100%)', border: '1px solid rgba(201,144,48,0.22)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+            <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(201,144,48,0.15)' }}>
+              <h2 className="font-semibold" style={{ color: '#e8b94a' }}>🏆 Résultats de la partie</h2>
             </div>
-            <div className="divide-y divide-slate-800">
+            <div style={{ borderTop: 'none' }}>
               {[...sortedParticipants]
                 .sort((a, b) => {
                   const ga = (a.finalAmount ?? 0) - calculateTotalInvested(a);
@@ -1000,18 +1006,16 @@ export default function GamePage() {
                     <div
                       key={p.playerId}
                       className="flex items-center gap-3 px-4 py-3"
+                      style={index === 0 && isWinner ? { background: 'rgba(201,144,48,0.05)' } : undefined}
                     >
-                      <span className="text-slate-600 text-sm font-mono w-5 text-center flex-shrink-0">
-                        {index + 1}
+                      <span className="text-slate-500 text-sm font-mono w-5 text-center flex-shrink-0">
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
                       </span>
                       <div
                         className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                          isWinner
-                            ? 'bg-emerald-500/15 text-emerald-400'
-                            : isLoser
-                            ? 'bg-red-500/15 text-red-400'
-                            : 'bg-slate-700 text-slate-400'
+                          isLoser ? 'bg-red-500/15 text-red-400' : 'bg-felt-700 text-slate-400'
                         }`}
+                        style={isWinner ? { background: 'rgba(201,144,48,0.15)', color: '#e8b94a' } : undefined}
                       >
                         {player.name.charAt(0).toUpperCase()}
                       </div>
@@ -1024,13 +1028,8 @@ export default function GamePage() {
                         <span>{formatCurrencyCompact(p.finalAmount ?? 0)}</span>
                       </div>
                       <span
-                        className={`font-bold font-mono text-sm ml-2 ${
-                          isWinner
-                            ? 'text-emerald-400'
-                            : isLoser
-                            ? 'text-red-400'
-                            : 'text-slate-400'
-                        }`}
+                        className={`font-bold font-mono text-sm ml-2 ${isLoser ? 'text-red-400' : !isWinner ? 'text-slate-400' : ''}`}
+                        style={isWinner ? { color: '#e8b94a' } : undefined}
                       >
                         {formatBalanceSign(gain)}
                       </span>
@@ -1057,18 +1056,22 @@ export default function GamePage() {
                   return (
                     <div
                       key={i}
-                      className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-2 flex-wrap"
+                      className="rounded-xl p-3 flex items-center gap-2 flex-wrap"
+                      style={{ background: '#0e2018', border: '1px solid rgba(201,144,48,0.15)' }}
                     >
                       <div className="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center text-xs font-bold text-red-400 flex-shrink-0">
                         {from.name.charAt(0)}
                       </div>
                       <span className="text-slate-300 text-sm font-medium">{from.name}</span>
-                      <span className="text-slate-600 text-sm">paye</span>
-                      <span className="font-bold font-mono text-white bg-slate-800 rounded-lg px-2 py-0.5 text-sm">
+                      <span className="text-slate-500 text-sm">paye</span>
+                      <span className="font-bold font-mono rounded-lg px-2 py-0.5 text-sm" style={{ background: 'rgba(201,144,48,0.12)', color: '#e8b94a', border: '1px solid rgba(201,144,48,0.2)' }}>
                         {formatCurrencyCompact(t.amount)}
                       </span>
-                      <span className="text-slate-600 text-sm">à</span>
-                      <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center text-xs font-bold text-emerald-400 flex-shrink-0">
+                      <span className="text-slate-500 text-sm">à</span>
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ background: 'rgba(201,144,48,0.15)', color: '#e8b94a' }}
+                      >
                         {to.name.charAt(0)}
                       </div>
                       <span className="text-slate-300 text-sm font-medium">{to.name}</span>
@@ -1080,8 +1083,8 @@ export default function GamePage() {
           )}
 
           {transfers.length === 0 && participants.length > 0 && (
-            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 text-center">
-              <p className="text-emerald-400 font-medium">
+            <div className="rounded-2xl p-4 text-center" style={{ background: 'rgba(201,144,48,0.06)', border: '1px solid rgba(201,144,48,0.2)' }}>
+              <p className="font-medium" style={{ color: '#e8b94a' }}>
                 ✓ Aucun remboursement nécessaire — tout le monde est quitte !
               </p>
             </div>
@@ -1103,7 +1106,7 @@ export default function GamePage() {
               {availablePlayers.map((p) => (
                 <label
                   key={p.id}
-                  className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors"
+                  className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-felt-800 transition-colors"
                 >
                   <input
                     type="radio"
@@ -1111,7 +1114,7 @@ export default function GamePage() {
                     value={p.id}
                     checked={selectedNewPlayer === p.id}
                     onChange={() => setSelectedNewPlayer(p.id)}
-                    className="accent-emerald-500"
+                    className="accent-amber-500"
                   />
                   <span className="text-white text-sm">{p.name}</span>
                 </label>

@@ -33,17 +33,26 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{ background: 'rgba(0, 0, 0, 0.75)' }}
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${sizeClass} bg-slate-900 border border-slate-700 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[90vh] flex flex-col`}
+        className={`relative w-full ${sizeClass} rounded-t-2xl sm:rounded-2xl max-h-[90vh] flex flex-col`}
+        style={{
+          background: 'linear-gradient(160deg, #0e2018 0%, #081510 100%)',
+          border: '1px solid rgba(201, 144, 48, 0.2)',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03)',
+        }}
       >
-        <div className="flex items-center justify-between p-5 border-b border-slate-700 flex-shrink-0">
+        <div
+          className="flex items-center justify-between p-5 flex-shrink-0"
+          style={{ borderBottom: '1px solid rgba(201, 144, 48, 0.15)' }}
+        >
           <h2 className="text-lg font-semibold text-white">{title}</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800"
+            className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-felt-800"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
