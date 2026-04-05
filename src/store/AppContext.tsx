@@ -9,6 +9,7 @@ import { AppState, GameParticipant } from '../types';
 import { createDemoData } from '../utils/demoData';
 import { generateId } from '../utils/formatters';
 import { fetchPlayers, upsertPlayers, upsertPlayer, updatePlayer, deletePlayer } from '../lib/playersApi';
+import { fetchGroups, upsertGroups } from '../lib/groupsApi';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'poker-tracker-v1';
@@ -89,7 +90,8 @@ type Action =
   | { type: 'DELETE_SETTLEMENT'; payload: { id: string } }
   | { type: 'IMPORT_STATE'; payload: AppState }
   | { type: 'LOAD_DEMO' }
-  | { type: 'SYNC_PLAYERS'; payload: AppState['players'] };
+  | { type: 'SYNC_PLAYERS'; payload: AppState['players'] }
+  | { type: 'SYNC_GROUPS'; payload: AppState['groups'] };
 
 function clone<T>(val: T): T {
   return JSON.parse(JSON.stringify(val)) as T;
@@ -374,6 +376,10 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, players: action.payload };
     }
 
+    case 'SYNC_GROUPS': {
+      return { ...state, groups: action.payload };
+    }
+
     default:
       return state;
   }
@@ -418,6 +424,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const playersById: AppState['players'] = {};
       remote.forEach((p) => { playersById[p.id] = p; });
       dispatch({ type: 'SYNC_PLAYERS', payload: playersById });
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Sync groups depuis Supabase au montage (une seule fois par session)
+  useEffect(() => {
+    if (!user) return;
+
+    (async () => {
+      const remote = await fetchGroups();
+
+      if (remote === null) {
+        // Erreur réseau → localStorage reste source de vérité, rien à faire
+        return;
+      }
+
+      if (remote.length === 0) {
+        // Supabase vide → migration one-shot
+        const localGroups = Object.values(state.groups);
+        if (localGroups.length > 0) {
+          // On passe les playerIds connus de Supabase pour filtrer les membres orphelins.
+          // À ce stade la migration players a déjà eu lieu (useEffect players s'est exécuté en premier).
+          // On relit les players Supabase pour avoir la liste à jour.
+          const { data: playersData } = await (await import('../lib/playersApi')).fetchPlayers()
+            .then((p) => ({ data: p }));
+          const knownPlayerIds = new Set(
+            (playersData ?? Object.values(state.players)).map((p) => p.id)
+          );
+          await upsertGroups(localGroups, user.id, knownPlayerIds);
+        }
+        // state.groups déjà correct, pas besoin de dispatcher
+        return;
+      }
+
+      // Supabase a des données → il fait autorité
+      const groupsById: AppState['groups'] = {};
+      remote.forEach((g) => { groupsById[g.id] = g; });
+      dispatch({ type: 'SYNC_GROUPS', payload: groupsById });
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
