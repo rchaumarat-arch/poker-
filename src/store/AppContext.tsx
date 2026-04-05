@@ -398,69 +398,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
   const { user } = useAuth();
 
-  // Sync players depuis Supabase au montage (une seule fois par session)
+  // Sync initial depuis Supabase au montage (une seule fois par session).
+  // Players et groups sont chargés séquentiellement dans une même IIFE async :
+  // la migration groups n'est tentée qu'après la résolution complète de la migration players,
+  // ce qui garantit que les players existent en Supabase avant d'insérer les group_members (FK).
   useEffect(() => {
     if (!user) return;
 
     (async () => {
-      const remote = await fetchPlayers();
+      // ── Étape 1 : players ──────────────────────────────────────────────────
+      const remotePlayers = await fetchPlayers();
 
-      if (remote === null) {
-        // Erreur réseau → localStorage reste source de vérité, rien à faire
-        return;
-      }
+      // knownPlayerIds = players effectivement présents dans Supabase après cette étape.
+      // Utilisé à l'étape 2 pour filtrer les group_members orphelins.
+      let knownPlayerIds: Set<string>;
 
-      if (remote.length === 0) {
-        // Supabase vide → migration one-shot : on pousse les players localStorage
+      if (remotePlayers === null) {
+        // Erreur réseau → localStorage intact, on utilisera les ids locaux comme
+        // meilleure approximation pour la migration groups qui suivra.
+        knownPlayerIds = new Set(Object.keys(state.players));
+      } else if (remotePlayers.length === 0) {
+        // Supabase vide → migration one-shot players
         const localPlayers = Object.values(state.players);
         if (localPlayers.length > 0) {
           await upsertPlayers(localPlayers, user.id);
         }
-        // state.players déjà correct, pas besoin de dispatcher
+        knownPlayerIds = new Set(localPlayers.map((p) => p.id));
+        // state.players déjà correct, pas de dispatch nécessaire
+      } else {
+        // Supabase a des données → il fait autorité
+        const playersById: AppState['players'] = {};
+        remotePlayers.forEach((p) => { playersById[p.id] = p; });
+        dispatch({ type: 'SYNC_PLAYERS', payload: playersById });
+        knownPlayerIds = new Set(remotePlayers.map((p) => p.id));
+      }
+
+      // ── Étape 2 : groups (s'exécute après await ci-dessus) ─────────────────
+      const remoteGroups = await fetchGroups();
+
+      if (remoteGroups === null) {
+        // Erreur réseau → localStorage intact
         return;
       }
 
-      // Supabase a des données → il fait autorité
-      const playersById: AppState['players'] = {};
-      remote.forEach((p) => { playersById[p.id] = p; });
-      dispatch({ type: 'SYNC_PLAYERS', payload: playersById });
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  // Sync groups depuis Supabase au montage (une seule fois par session)
-  useEffect(() => {
-    if (!user) return;
-
-    (async () => {
-      const remote = await fetchGroups();
-
-      if (remote === null) {
-        // Erreur réseau → localStorage reste source de vérité, rien à faire
-        return;
-      }
-
-      if (remote.length === 0) {
-        // Supabase vide → migration one-shot
+      if (remoteGroups.length === 0) {
+        // Supabase vide → migration one-shot groups
+        // knownPlayerIds est garanti à jour : étape 1 est terminée.
         const localGroups = Object.values(state.groups);
         if (localGroups.length > 0) {
-          // On passe les playerIds connus de Supabase pour filtrer les membres orphelins.
-          // À ce stade la migration players a déjà eu lieu (useEffect players s'est exécuté en premier).
-          // On relit les players Supabase pour avoir la liste à jour.
-          const { data: playersData } = await (await import('../lib/playersApi')).fetchPlayers()
-            .then((p) => ({ data: p }));
-          const knownPlayerIds = new Set(
-            (playersData ?? Object.values(state.players)).map((p) => p.id)
-          );
           await upsertGroups(localGroups, user.id, knownPlayerIds);
         }
-        // state.groups déjà correct, pas besoin de dispatcher
+        // state.groups déjà correct, pas de dispatch nécessaire
         return;
       }
 
       // Supabase a des données → il fait autorité
       const groupsById: AppState['groups'] = {};
-      remote.forEach((g) => { groupsById[g.id] = g; });
+      remoteGroups.forEach((g) => { groupsById[g.id] = g; });
       dispatch({ type: 'SYNC_GROUPS', payload: groupsById });
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
