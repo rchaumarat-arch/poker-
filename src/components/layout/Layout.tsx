@@ -51,24 +51,24 @@ export function Layout({ children }: LayoutProps) {
           </Link>
 
           {/* Right: user + sign out */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            {user && (
+          {user && (
+            <div className="flex items-center gap-3 flex-shrink-0">
               <span className="hidden sm:block text-xs truncate max-w-[140px]" style={{ color: 'var(--text-muted)' }}>
                 {user.email}
               </span>
-            )}
-            <button
-              onClick={() => signOut()}
-              className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-              style={{
-                color: 'var(--text-muted)',
-                border: '1px solid rgba(201,160,48,0.18)',
-                background: 'rgba(201,160,48,0.06)',
-              }}
-            >
-              Se déconnecter
-            </button>
-          </div>
+              <button
+                onClick={() => signOut()}
+                className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                style={{
+                  color: 'var(--text-muted)',
+                  border: '1px solid rgba(201,160,48,0.18)',
+                  background: 'rgba(201,160,48,0.06)',
+                }}
+              >
+                Se déconnecter
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Gold accent line at bottom */}
