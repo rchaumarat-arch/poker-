@@ -10,6 +10,7 @@ import { createDemoData } from '../utils/demoData';
 import { generateId } from '../utils/formatters';
 import { fetchPlayers, upsertPlayers, upsertPlayer, updatePlayer, deletePlayer } from '../lib/playersApi';
 import { fetchGroups, upsertGroups, upsertGroup, updateGroup, deleteGroup, addMember, removeMember } from '../lib/groupsApi';
+import { fetchGames, upsertGames } from '../lib/gamesApi';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'poker-tracker-v1';
@@ -91,7 +92,8 @@ type Action =
   | { type: 'IMPORT_STATE'; payload: AppState }
   | { type: 'LOAD_DEMO' }
   | { type: 'SYNC_PLAYERS'; payload: AppState['players'] }
-  | { type: 'SYNC_GROUPS'; payload: AppState['groups'] };
+  | { type: 'SYNC_GROUPS'; payload: AppState['groups'] }
+  | { type: 'SYNC_GAMES'; payload: AppState['games'] };
 
 function clone<T>(val: T): T {
   return JSON.parse(JSON.stringify(val)) as T;
@@ -376,6 +378,10 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, groups: action.payload };
     }
 
+    case 'SYNC_GAMES': {
+      return { ...state, games: action.payload };
+    }
+
     default:
       return state;
   }
@@ -431,27 +437,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       // ── Étape 2 : groups (s'exécute après await ci-dessus) ─────────────────
       const remoteGroups = await fetchGroups();
+      let knownGroupIds: Set<string>;
 
       if (remoteGroups === null) {
-        // Erreur réseau → localStorage intact
-        return;
-      }
-
-      if (remoteGroups.length === 0) {
+        // Erreur réseau → localStorage intact, approximation locale pour l'étape 3
+        console.warn('[AppContext] fetchGroups failed — using localStorage as fallback');
+        knownGroupIds = new Set(Object.keys(state.groups));
+      } else if (remoteGroups.length === 0) {
         // Supabase vide → migration one-shot groups
-        // knownPlayerIds est garanti à jour : étape 1 est terminée.
         const localGroups = Object.values(state.groups);
         if (localGroups.length > 0) {
           await upsertGroups(localGroups, user.id, knownPlayerIds);
         }
+        knownGroupIds = new Set(localGroups.map((g) => g.id));
         // state.groups déjà correct, pas de dispatch nécessaire
+      } else {
+        // Supabase a des données → il fait autorité
+        const groupsById: AppState['groups'] = {};
+        remoteGroups.forEach((g) => { groupsById[g.id] = g; });
+        dispatch({ type: 'SYNC_GROUPS', payload: groupsById });
+        knownGroupIds = new Set(remoteGroups.map((g) => g.id));
+      }
+
+      // ── Étape 3 : games (s'exécute après await ci-dessus) ──────────────────
+      const remoteGames = await fetchGames();
+
+      if (remoteGames === null) {
+        // Erreur réseau → localStorage intact
+        console.warn('[AppContext] fetchGames failed — using localStorage as fallback');
+        return;
+      }
+
+      if (remoteGames.length === 0) {
+        // Supabase vide → migration one-shot games
+        // knownGroupIds et knownPlayerIds sont garantis à jour : étapes 1 et 2 terminées.
+        const localGames = Object.values(state.games);
+        if (localGames.length > 0) {
+          await upsertGames(localGames, user.id, knownGroupIds, knownPlayerIds);
+        }
+        // state.games déjà correct, pas de dispatch nécessaire
         return;
       }
 
       // Supabase a des données → il fait autorité
-      const groupsById: AppState['groups'] = {};
-      remoteGroups.forEach((g) => { groupsById[g.id] = g; });
-      dispatch({ type: 'SYNC_GROUPS', payload: groupsById });
+      const gamesById: AppState['games'] = {};
+      remoteGames.forEach((g) => { gamesById[g.id] = g; });
+      dispatch({ type: 'SYNC_GAMES', payload: gamesById });
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
