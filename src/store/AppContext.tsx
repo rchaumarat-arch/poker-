@@ -10,7 +10,7 @@ import { createDemoData } from '../utils/demoData';
 import { generateId } from '../utils/formatters';
 import { fetchPlayers, upsertPlayers, upsertPlayer, updatePlayer, deletePlayer } from '../lib/playersApi';
 import { fetchGroups, upsertGroups, upsertGroup, updateGroup, deleteGroup, addMember, removeMember } from '../lib/groupsApi';
-import { fetchGames, upsertGames } from '../lib/gamesApi';
+import { fetchGames, upsertGames, upsertGame, updateGame, deleteGame, addParticipant, removeParticipant, updateBuyIn, addRebuy, updateRebuy, removeRebuy, setFinalAmount, finishGame, reopenGame, resetGameResults } from '../lib/gamesApi';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'poker-tracker-v1';
@@ -42,6 +42,8 @@ type Action =
         date: string;
         participantIds: string[];
         initialBuyIn: number;
+        id?: string;
+        createdAt?: string;
       };
     }
   | { type: 'UPDATE_GAME'; payload: { id: string; name?: string; date?: string } }
@@ -57,7 +59,7 @@ type Action =
     }
   | {
       type: 'ADD_REBUY';
-      payload: { gameId: string; playerId: string; amount: number };
+      payload: { gameId: string; playerId: string; amount: number; rebuyId?: string };
     }
   | {
       type: 'UPDATE_REBUY';
@@ -197,29 +199,17 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'ADD_GAME': {
       const { groupId, name, date, participantIds, initialBuyIn } = action.payload;
-      const id = generateId();
+      const id = action.payload.id ?? generateId();
+      const createdAt = action.payload.createdAt ?? new Date().toISOString();
       const participants: Record<string, GameParticipant> = {};
       participantIds.forEach((playerId) => {
-        participants[playerId] = {
-          playerId,
-          initialBuyIn,
-          rebuys: [],
-          finalAmount: null,
-        };
+        participants[playerId] = { playerId, initialBuyIn, rebuys: [], finalAmount: null };
       });
       return {
         ...state,
         games: {
           ...state.games,
-          [id]: {
-            id,
-            groupId,
-            name,
-            date,
-            status: 'in-progress',
-            participants,
-            createdAt: new Date().toISOString(),
-          },
+          [id]: { id, groupId, name, date, status: 'in-progress', participants, createdAt },
         },
       };
     }
@@ -273,7 +263,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'ADD_REBUY': {
       const s = clone(state);
       s.games[action.payload.gameId].participants[action.payload.playerId].rebuys.push({
-        id: generateId(),
+        id: action.payload.rebuyId ?? generateId(),
         amount: action.payload.amount,
       });
       return s;
@@ -548,6 +538,81 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dispatch(action);
       removeMember(action.payload.groupId, action.payload.playerId).then((ok) => {
         if (!ok) console.warn('[AppContext] REMOVE_MEMBER sync failed — local state preserved', action.payload);
+      });
+    } else if (action.type === 'ADD_GAME') {
+      const id = action.payload.id ?? generateId();
+      const createdAt = action.payload.createdAt ?? new Date().toISOString();
+      const enriched: Action = { type: 'ADD_GAME', payload: { ...action.payload, id, createdAt } };
+      dispatch(enriched);
+      upsertGame(
+        { id, groupId: action.payload.groupId, name: action.payload.name, date: action.payload.date, status: 'in-progress', createdAt },
+        action.payload.participantIds,
+        action.payload.initialBuyIn,
+        user.id
+      ).then((ok) => {
+        if (!ok) console.warn('[AppContext] ADD_GAME sync failed — local state preserved', { id });
+      });
+    } else if (action.type === 'UPDATE_GAME') {
+      dispatch(action);
+      updateGame(action.payload.id, { name: action.payload.name, date: action.payload.date }).then((ok) => {
+        if (!ok) console.warn('[AppContext] UPDATE_GAME sync failed — local state preserved', { id: action.payload.id });
+      });
+    } else if (action.type === 'DELETE_GAME') {
+      dispatch(action);
+      deleteGame(action.payload.id).then((ok) => {
+        if (!ok) console.warn('[AppContext] DELETE_GAME sync failed — local state preserved', { id: action.payload.id });
+      });
+    } else if (action.type === 'ADD_PARTICIPANT') {
+      dispatch(action);
+      addParticipant(action.payload.gameId, action.payload.playerId, action.payload.initialBuyIn).then((ok) => {
+        if (!ok) console.warn('[AppContext] ADD_PARTICIPANT sync failed — local state preserved', action.payload);
+      });
+    } else if (action.type === 'REMOVE_PARTICIPANT') {
+      dispatch(action);
+      removeParticipant(action.payload.gameId, action.payload.playerId).then((ok) => {
+        if (!ok) console.warn('[AppContext] REMOVE_PARTICIPANT sync failed — local state preserved', action.payload);
+      });
+    } else if (action.type === 'UPDATE_BUYIN') {
+      dispatch(action);
+      updateBuyIn(action.payload.gameId, action.payload.playerId, action.payload.amount).then((ok) => {
+        if (!ok) console.warn('[AppContext] UPDATE_BUYIN sync failed — local state preserved', action.payload);
+      });
+    } else if (action.type === 'ADD_REBUY') {
+      const rebuyId = action.payload.rebuyId ?? generateId();
+      const enriched: Action = { type: 'ADD_REBUY', payload: { ...action.payload, rebuyId } };
+      dispatch(enriched);
+      addRebuy(rebuyId, action.payload.gameId, action.payload.playerId, action.payload.amount).then((ok) => {
+        if (!ok) console.warn('[AppContext] ADD_REBUY sync failed — local state preserved', { rebuyId });
+      });
+    } else if (action.type === 'UPDATE_REBUY') {
+      dispatch(action);
+      updateRebuy(action.payload.rebuyId, action.payload.amount).then((ok) => {
+        if (!ok) console.warn('[AppContext] UPDATE_REBUY sync failed — local state preserved', { rebuyId: action.payload.rebuyId });
+      });
+    } else if (action.type === 'REMOVE_REBUY') {
+      dispatch(action);
+      removeRebuy(action.payload.rebuyId).then((ok) => {
+        if (!ok) console.warn('[AppContext] REMOVE_REBUY sync failed — local state preserved', { rebuyId: action.payload.rebuyId });
+      });
+    } else if (action.type === 'SET_FINAL_AMOUNT') {
+      dispatch(action);
+      setFinalAmount(action.payload.gameId, action.payload.playerId, action.payload.amount).then((ok) => {
+        if (!ok) console.warn('[AppContext] SET_FINAL_AMOUNT sync failed — local state preserved', action.payload);
+      });
+    } else if (action.type === 'FINISH_GAME') {
+      dispatch(action);
+      finishGame(action.payload.id).then((ok) => {
+        if (!ok) console.warn('[AppContext] FINISH_GAME sync failed — local state preserved', { id: action.payload.id });
+      });
+    } else if (action.type === 'REOPEN_GAME') {
+      dispatch(action);
+      reopenGame(action.payload.id).then((ok) => {
+        if (!ok) console.warn('[AppContext] REOPEN_GAME sync failed — local state preserved', { id: action.payload.id });
+      });
+    } else if (action.type === 'RESET_GAME_RESULTS') {
+      dispatch(action);
+      resetGameResults(action.payload.id).then((ok) => {
+        if (!ok) console.warn('[AppContext] RESET_GAME_RESULTS sync failed — local state preserved', { id: action.payload.id });
       });
     } else {
       dispatch(action);

@@ -58,8 +58,6 @@ function toGame(row: DbGame): Game {
 // ── Lecture ──────────────────────────────────────────────────────────────────
 
 export async function fetchGames(): Promise<Game[] | null> {
-  // rebuys est imbriqué dans game_participants grâce à la FK composite
-  // (game_id, player_id) → game_participants(game_id, player_id)
   const { data, error } = await supabase
     .from('games')
     .select(`
@@ -125,7 +123,7 @@ export async function upsertGames(
   const participantRows: { game_id: string; player_id: string; initial_buy_in: number; final_amount: number | null }[] = [];
 
   for (const g of games) {
-    if (!migratedGameIds.has(g.id)) continue; // game ignoré à l'étape 1
+    if (!migratedGameIds.has(g.id)) continue;
     for (const p of Object.values(g.participants)) {
       if (!knownPlayerIds.has(p.playerId)) {
         console.warn('[gamesApi] upsertGames: playerId absent de Supabase, participant ignoré', {
@@ -158,7 +156,7 @@ export async function upsertGames(
   for (const g of games) {
     if (!migratedGameIds.has(g.id)) continue;
     for (const p of Object.values(g.participants)) {
-      if (!migratedParticipantKeys.has(`${g.id}:${p.playerId}`)) continue; // participant ignoré
+      if (!migratedParticipantKeys.has(`${g.id}:${p.playerId}`)) continue;
       for (const r of p.rebuys) {
         rebuyRows.push({ id: r.id, game_id: g.id, player_id: p.playerId, amount: r.amount });
       }
@@ -171,6 +169,192 @@ export async function upsertGames(
       console.error('[gamesApi] upsertGames (rebuys):', rebuyError.message);
       return false;
     }
+  }
+
+  return true;
+}
+
+// ── Écriture ─────────────────────────────────────────────────────────────────
+
+export async function upsertGame(
+  game: { id: string; groupId: string; name: string; date: string; status: string; createdAt: string },
+  participantIds: string[],
+  initialBuyIn: number,
+  userId: string
+): Promise<boolean> {
+  const { error: gameError } = await supabase.from('games').upsert({
+    id: game.id,
+    user_id: userId,
+    group_id: game.groupId,
+    name: game.name,
+    date: game.date,
+    status: game.status,
+    created_at: game.createdAt,
+  });
+  if (gameError) {
+    console.error('[gamesApi] upsertGame:', gameError.message, { gameId: game.id });
+    return false;
+  }
+
+  if (participantIds.length === 0) return true;
+
+  const participantRows = participantIds.map((playerId) => ({
+    game_id: game.id,
+    player_id: playerId,
+    initial_buy_in: initialBuyIn,
+    final_amount: null,
+  }));
+
+  const { error: participantError } = await supabase
+    .from('game_participants')
+    .upsert(participantRows, { onConflict: 'game_id,player_id', ignoreDuplicates: true });
+  if (participantError) {
+    console.error('[gamesApi] upsertGame (participants):', participantError.message, { gameId: game.id });
+    return false;
+  }
+
+  return true;
+}
+
+export async function updateGame(id: string, fields: { name?: string; date?: string }): Promise<boolean> {
+  const { error } = await supabase.from('games').update(fields).eq('id', id);
+  if (error) {
+    console.error('[gamesApi] updateGame:', error.message, { gameId: id });
+    return false;
+  }
+  return true;
+}
+
+export async function deleteGame(id: string): Promise<boolean> {
+  const { error } = await supabase.from('games').delete().eq('id', id);
+  if (error) {
+    console.error('[gamesApi] deleteGame:', error.message, { gameId: id });
+    return false;
+  }
+  return true;
+}
+
+export async function addParticipant(gameId: string, playerId: string, initialBuyIn: number): Promise<boolean> {
+  // upsert idempotent : même précaution que addMember pour éviter une erreur de contrainte PK
+  const { error } = await supabase
+    .from('game_participants')
+    .upsert(
+      { game_id: gameId, player_id: playerId, initial_buy_in: initialBuyIn, final_amount: null },
+      { onConflict: 'game_id,player_id', ignoreDuplicates: true }
+    );
+  if (error) {
+    console.error('[gamesApi] addParticipant:', error.message, { gameId, playerId });
+    return false;
+  }
+  return true;
+}
+
+export async function removeParticipant(gameId: string, playerId: string): Promise<boolean> {
+  // La FK composite rebuys → game_participants cascade supprime les rebuys du participant
+  const { error } = await supabase
+    .from('game_participants')
+    .delete()
+    .eq('game_id', gameId)
+    .eq('player_id', playerId);
+  if (error) {
+    console.error('[gamesApi] removeParticipant:', error.message, { gameId, playerId });
+    return false;
+  }
+  return true;
+}
+
+export async function updateBuyIn(gameId: string, playerId: string, amount: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('game_participants')
+    .update({ initial_buy_in: amount })
+    .eq('game_id', gameId)
+    .eq('player_id', playerId);
+  if (error) {
+    console.error('[gamesApi] updateBuyIn:', error.message, { gameId, playerId });
+    return false;
+  }
+  return true;
+}
+
+export async function addRebuy(rebuyId: string, gameId: string, playerId: string, amount: number): Promise<boolean> {
+  const { error } = await supabase
+    .from('rebuys')
+    .insert({ id: rebuyId, game_id: gameId, player_id: playerId, amount });
+  if (error) {
+    console.error('[gamesApi] addRebuy:', error.message, { rebuyId, gameId, playerId });
+    return false;
+  }
+  return true;
+}
+
+export async function updateRebuy(rebuyId: string, amount: number): Promise<boolean> {
+  const { error } = await supabase.from('rebuys').update({ amount }).eq('id', rebuyId);
+  if (error) {
+    console.error('[gamesApi] updateRebuy:', error.message, { rebuyId });
+    return false;
+  }
+  return true;
+}
+
+export async function removeRebuy(rebuyId: string): Promise<boolean> {
+  const { error } = await supabase.from('rebuys').delete().eq('id', rebuyId);
+  if (error) {
+    console.error('[gamesApi] removeRebuy:', error.message, { rebuyId });
+    return false;
+  }
+  return true;
+}
+
+export async function setFinalAmount(gameId: string, playerId: string, amount: number | null): Promise<boolean> {
+  const { error } = await supabase
+    .from('game_participants')
+    .update({ final_amount: amount })
+    .eq('game_id', gameId)
+    .eq('player_id', playerId);
+  if (error) {
+    console.error('[gamesApi] setFinalAmount:', error.message, { gameId, playerId });
+    return false;
+  }
+  return true;
+}
+
+export async function finishGame(id: string): Promise<boolean> {
+  const { error } = await supabase.from('games').update({ status: 'finished' }).eq('id', id);
+  if (error) {
+    console.error('[gamesApi] finishGame:', error.message, { gameId: id });
+    return false;
+  }
+  return true;
+}
+
+export async function reopenGame(id: string): Promise<boolean> {
+  const { error } = await supabase.from('games').update({ status: 'in-progress' }).eq('id', id);
+  if (error) {
+    console.error('[gamesApi] reopenGame:', error.message, { gameId: id });
+    return false;
+  }
+  return true;
+}
+
+export async function resetGameResults(id: string): Promise<boolean> {
+  // Deux opérations séquentielles : remettre final_amount à null pour tous les participants,
+  // puis remettre le statut du game à 'in-progress'
+  const { error: participantError } = await supabase
+    .from('game_participants')
+    .update({ final_amount: null })
+    .eq('game_id', id);
+  if (participantError) {
+    console.error('[gamesApi] resetGameResults (participants):', participantError.message, { gameId: id });
+    return false;
+  }
+
+  const { error: gameError } = await supabase
+    .from('games')
+    .update({ status: 'in-progress' })
+    .eq('id', id);
+  if (gameError) {
+    console.error('[gamesApi] resetGameResults (status):', gameError.message, { gameId: id });
+    return false;
   }
 
   return true;
