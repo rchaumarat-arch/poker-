@@ -38,6 +38,7 @@ export async function upsertGroups(
 ): Promise<boolean> {
   if (groups.length === 0) return true;
 
+  // 1. Upsert les groupes
   const groupRows = groups.map((g) => ({
     id: g.id,
     user_id: userId,
@@ -51,6 +52,22 @@ export async function upsertGroups(
     return false;
   }
 
+  // 2. Insérer le créateur comme owner dans group_memberships pour chaque groupe migré
+  const membershipRows = groups.map((g) => ({
+    group_id: g.id,
+    user_id: userId,
+    role: 'owner',
+  }));
+
+  const { error: membershipError } = await supabase
+    .from('group_memberships')
+    .upsert(membershipRows, { onConflict: 'group_id,user_id', ignoreDuplicates: true });
+  if (membershipError) {
+    console.error('[groupsApi] upsertGroups (group_memberships):', membershipError.message);
+    // Non bloquant : les groupes sont migrés, on continue
+  }
+
+  // 3. Upsert les membres joueurs (group_members)
   const memberRows: { group_id: string; player_id: string }[] = [];
 
   for (const g of groups) {
@@ -68,9 +85,9 @@ export async function upsertGroups(
 
   if (memberRows.length === 0) return true;
 
-  const { error: memberError } = await supabase.from('group_members').upsert(memberRows);
-  if (memberError) {
-    console.error('[groupsApi] upsertGroups (group_members):', memberError.message);
+  const { error: playerMemberError } = await supabase.from('group_members').upsert(memberRows);
+  if (playerMemberError) {
+    console.error('[groupsApi] upsertGroups (group_members):', playerMemberError.message);
     return false;
   }
 
@@ -78,16 +95,30 @@ export async function upsertGroups(
 }
 
 export async function upsertGroup(group: Group, userId: string): Promise<boolean> {
-  const { error } = await supabase.from('groups').upsert({
+  // 1. Upsert le groupe
+  const { error: groupError } = await supabase.from('groups').upsert({
     id: group.id,
     user_id: userId,
     name: group.name,
     created_at: group.createdAt,
   });
-  if (error) {
-    console.error('[groupsApi] upsertGroup:', error.message, { groupId: group.id });
+  if (groupError) {
+    console.error('[groupsApi] upsertGroup:', groupError.message, { groupId: group.id });
     return false;
   }
+
+  // 2. Insérer le créateur comme owner dans group_memberships
+  const { error: membershipError } = await supabase
+    .from('group_memberships')
+    .upsert(
+      { group_id: group.id, user_id: userId, role: 'owner' },
+      { onConflict: 'group_id,user_id', ignoreDuplicates: true }
+    );
+  if (membershipError) {
+    console.error('[groupsApi] upsertGroup (group_memberships):', membershipError.message, { groupId: group.id });
+    // Non bloquant : le groupe existe, le membership peut être réinséré plus tard
+  }
+
   return true;
 }
 
@@ -110,10 +141,6 @@ export async function deleteGroup(id: string): Promise<boolean> {
 }
 
 export async function addMember(groupId: string, playerId: string): Promise<boolean> {
-  // upsert avec ignoreDuplicates : si la paire (group_id, player_id) existe déjà
-  // (contrainte PK), Supabase l'ignore silencieusement sans retourner d'erreur.
-  // Nécessaire car le reducer bloque les doublons localement, mais dispatchWithSync
-  // appelle cette fonction sans pouvoir vérifier l'état courant (closure stale).
   const { error } = await supabase
     .from('group_members')
     .upsert(
