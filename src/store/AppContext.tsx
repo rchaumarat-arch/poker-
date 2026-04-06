@@ -11,6 +11,7 @@ import { generateId } from '../utils/formatters';
 import { fetchPlayers, upsertPlayers, upsertPlayer, updatePlayer, deletePlayer } from '../lib/playersApi';
 import { fetchGroups, upsertGroups, upsertGroup, updateGroup, deleteGroup, addMember, removeMember } from '../lib/groupsApi';
 import { fetchGames, upsertGames, upsertGame, updateGame, deleteGame, addParticipant, removeParticipant, updateBuyIn, addRebuy, updateRebuy, removeRebuy, setFinalAmount, finishGame, reopenGame, resetGameResults } from '../lib/gamesApi';
+import { fetchSettlements, upsertSettlements, insertSettlement, deleteSettlement } from '../lib/settlementsApi';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'poker-tracker-v1';
@@ -88,6 +89,8 @@ type Action =
         playerId: string;
         balance: number;
         note: string;
+        id?: string;
+        date?: string;
       };
     }
   | { type: 'DELETE_SETTLEMENT'; payload: { id: string } }
@@ -95,7 +98,8 @@ type Action =
   | { type: 'LOAD_DEMO' }
   | { type: 'SYNC_PLAYERS'; payload: AppState['players'] }
   | { type: 'SYNC_GROUPS'; payload: AppState['groups'] }
-  | { type: 'SYNC_GAMES'; payload: AppState['games'] };
+  | { type: 'SYNC_GAMES'; payload: AppState['games'] }
+  | { type: 'SYNC_SETTLEMENTS'; payload: AppState['settlements'] };
 
 function clone<T>(val: T): T {
   return JSON.parse(JSON.stringify(val)) as T;
@@ -329,18 +333,13 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'SETTLE_PLAYER': {
       const { groupId, playerId, balance, note } = action.payload;
+      const id = action.payload.id ?? generateId();
+      const date = action.payload.date ?? new Date().toISOString();
       return {
         ...state,
         settlements: [
           ...state.settlements,
-          {
-            id: generateId(),
-            groupId,
-            playerId,
-            settledBalance: balance,
-            date: new Date().toISOString(),
-            note,
-          },
+          { id, groupId, playerId, settledBalance: balance, date, note },
         ],
       };
     }
@@ -370,6 +369,10 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'SYNC_GAMES': {
       return { ...state, games: action.payload };
+    }
+
+    case 'SYNC_SETTLEMENTS': {
+      return { ...state, settlements: action.payload };
     }
 
     default:
@@ -460,19 +463,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (remoteGames.length === 0) {
         // Supabase vide → migration one-shot games
-        // knownGroupIds et knownPlayerIds sont garantis à jour : étapes 1 et 2 terminées.
         const localGames = Object.values(state.games);
         if (localGames.length > 0) {
           await upsertGames(localGames, user.id, knownGroupIds, knownPlayerIds);
         }
         // state.games déjà correct, pas de dispatch nécessaire
+      } else {
+        // Supabase a des données → il fait autorité
+        const gamesById: AppState['games'] = {};
+        remoteGames.forEach((g) => { gamesById[g.id] = g; });
+        dispatch({ type: 'SYNC_GAMES', payload: gamesById });
+      }
+
+      // ── Étape 4 : settlements (s'exécute après await ci-dessus) ────────────
+      const remoteSettlements = await fetchSettlements();
+
+      if (remoteSettlements === null) {
+        console.warn('[AppContext] fetchSettlements failed — using localStorage as fallback');
+        return;
+      }
+
+      if (remoteSettlements.length === 0) {
+        // Supabase vide → migration one-shot settlements
+        // knownGroupIds et knownPlayerIds sont garantis à jour : étapes 1 et 2 terminées.
+        if (state.settlements.length > 0) {
+          await upsertSettlements(state.settlements, user.id, knownGroupIds, knownPlayerIds);
+        }
+        // state.settlements déjà correct, pas de dispatch nécessaire
         return;
       }
 
       // Supabase a des données → il fait autorité
-      const gamesById: AppState['games'] = {};
-      remoteGames.forEach((g) => { gamesById[g.id] = g; });
-      dispatch({ type: 'SYNC_GAMES', payload: gamesById });
+      dispatch({ type: 'SYNC_SETTLEMENTS', payload: remoteSettlements });
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
@@ -613,6 +635,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dispatch(action);
       resetGameResults(action.payload.id).then((ok) => {
         if (!ok) console.warn('[AppContext] RESET_GAME_RESULTS sync failed — local state preserved', { id: action.payload.id });
+      });
+    } else if (action.type === 'SETTLE_PLAYER') {
+      const id = action.payload.id ?? generateId();
+      const date = action.payload.date ?? new Date().toISOString();
+      const enriched: Action = { type: 'SETTLE_PLAYER', payload: { ...action.payload, id, date } };
+      dispatch(enriched);
+      insertSettlement(
+        { id, groupId: action.payload.groupId, playerId: action.payload.playerId, settledBalance: action.payload.balance, date, note: action.payload.note },
+        user.id
+      ).then((ok) => {
+        if (!ok) console.warn('[AppContext] SETTLE_PLAYER sync failed — local state preserved', { id });
+      });
+    } else if (action.type === 'DELETE_SETTLEMENT') {
+      dispatch(action);
+      deleteSettlement(action.payload.id).then((ok) => {
+        if (!ok) console.warn('[AppContext] DELETE_SETTLEMENT sync failed — local state preserved', { id: action.payload.id });
       });
     } else {
       dispatch(action);
