@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useApp } from '../store/AppContext';
 import { Modal } from '../components/common/Modal';
@@ -6,6 +6,8 @@ import { Button } from '../components/common/Button';
 import { Input, CurrencyInput } from '../components/common/Input';
 import { Badge } from '../components/common/Badge';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { fetchGroupMemberships, addMemberByEmail } from '../lib/groupsApi';
+import type { GroupMembership } from '../lib/groupsApi';
 import {
   getPlayerCumulativeStats,
   getGroupCumulativeTransfers,
@@ -57,7 +59,7 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
-type Tab = 'games' | 'balances' | 'history';
+type Tab = 'games' | 'balances' | 'history' | 'members';
 
 export default function GroupPage() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -87,6 +89,20 @@ export default function GroupPage() {
 
   // Filter
   const [filterPlayerId, setFilterPlayerId] = useState('');
+
+  // Membres auth (group_memberships)
+  const [memberships, setMemberships] = useState<GroupMembership[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!groupId) return;
+    fetchGroupMemberships(groupId).then((data) => {
+      if (data) setMemberships(data);
+    });
+  }, [groupId]);
 
   const group = groupId ? state.groups[groupId] : null;
 
@@ -217,6 +233,27 @@ export default function GroupPage() {
     setSettleNote('');
   };
 
+  const handleInvite = async () => {
+    const email = inviteEmail.trim();
+    if (!email) return;
+    setInviteLoading(true);
+    setInviteError(null);
+    setInviteSuccess(null);
+    try {
+      const added = await addMemberByEmail(group!.id, email);
+      const name = added.displayName || added.email;
+      setInviteSuccess(`${name} ajouté avec succès.`);
+      setInviteEmail('');
+      fetchGroupMemberships(group!.id).then((data) => {
+        if (data) setMemberships(data);
+      });
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Erreur inconnue.');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
   const settlingPlayer = settlePlayerId ? state.players[settlePlayerId] : null;
   const settlingStats = settlePlayerId
     ? getPlayerCumulativeStats(settlePlayerId, group.id, state)
@@ -226,6 +263,7 @@ export default function GroupPage() {
     { id: 'games', label: 'Parties' },
     { id: 'balances', label: 'Soldes' },
     { id: 'history', label: 'Historique' },
+    { id: 'members', label: 'Membres' },
   ];
 
   return (
@@ -574,6 +612,83 @@ export default function GroupPage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* --- MEMBERS TAB --- */}
+      {activeTab === 'members' && (
+        <div className="space-y-6">
+          {/* Liste des comptes ayant accès au groupe */}
+          <div className="space-y-3">
+            <h2 className="section-header">
+              <span className="suit-spade">♠</span>
+              Accès au groupe
+            </h2>
+            {memberships.length === 0 ? (
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                Aucun compte lié pour l'instant.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {memberships.map((m) => (
+                  <div key={m.userId} className="card p-3 flex items-center gap-3">
+                    <div className="avatar w-8 h-8 avatar-gold flex-shrink-0">
+                      {(m.displayName || m.email).charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {m.displayName && (
+                        <p className="text-sm font-medium" style={{ color: 'var(--text-warm)' }}>
+                          {m.displayName}
+                        </p>
+                      )}
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{m.email}</p>
+                    </div>
+                    <Badge variant={m.role === 'owner' ? 'gold' : 'success'}>
+                      {m.role === 'owner' ? 'Propriétaire' : 'Membre'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Formulaire d'invitation par email */}
+          <div className="space-y-3">
+            <h2 className="section-header">
+              <span className="suit-club">♣</span>
+              Inviter par email
+            </h2>
+            <Input
+              label="Email du compte à inviter"
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => {
+                setInviteEmail(e.target.value);
+                setInviteError(null);
+                setInviteSuccess(null);
+              }}
+              placeholder="email@exemple.com"
+            />
+            <Button
+              variant="primary"
+              onClick={handleInvite}
+              disabled={!inviteEmail.trim() || inviteLoading}
+            >
+              {inviteLoading ? 'Recherche…' : 'Ajouter ce compte'}
+            </Button>
+            {inviteError && (
+              <p className="text-sm text-red-400">{inviteError}</p>
+            )}
+            {inviteSuccess && (
+              <p className="text-sm" style={{ color: 'var(--gold-bright)' }}>
+                ✓ {inviteSuccess}
+              </p>
+            )}
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              L'utilisateur doit avoir un compte sur cette application.
+              Il verra ce groupe dès sa prochaine connexion.
+            </p>
+          </div>
         </div>
       )}
 

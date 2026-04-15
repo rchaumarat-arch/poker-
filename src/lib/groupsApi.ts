@@ -166,3 +166,90 @@ export async function removeMember(groupId: string, playerId: string): Promise<b
   }
   return true;
 }
+
+// ── Accès collaboratif (group_memberships) ────────────────────────────────────
+
+export interface GroupMembership {
+  userId: string;
+  role: 'owner' | 'member';
+  email: string;
+  displayName: string | null;
+}
+
+export async function fetchGroupMemberships(groupId: string): Promise<GroupMembership[] | null> {
+  const { data: rows, error } = await supabase
+    .from('group_memberships')
+    .select('user_id, role')
+    .eq('group_id', groupId);
+
+  if (error) {
+    console.error('[groupsApi] fetchGroupMemberships:', error.message, { groupId });
+    return null;
+  }
+  if (!rows || rows.length === 0) return [];
+
+  const userIds = (rows as { user_id: string; role: string }[]).map((r) => r.user_id);
+
+  const { data: profileRows, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, email, display_name')
+    .in('id', userIds);
+
+  if (profileError) {
+    console.error('[groupsApi] fetchGroupMemberships (profiles):', profileError.message, { groupId });
+    return null;
+  }
+
+  const profileMap = new Map(
+    ((profileRows ?? []) as { id: string; email: string; display_name: string | null }[]).map(
+      (p) => [p.id, p]
+    )
+  );
+
+  return (rows as { user_id: string; role: string }[]).map((r) => {
+    const profile = profileMap.get(r.user_id);
+    return {
+      userId: r.user_id,
+      role: r.role as 'owner' | 'member',
+      email: profile?.email ?? '',
+      displayName: profile?.display_name ?? null,
+    };
+  });
+}
+
+export async function addMemberByEmail(
+  groupId: string,
+  email: string
+): Promise<{ displayName: string | null; email: string }> {
+  // 1. Rechercher le compte par email via la fonction RPC
+  const { data: users, error } = await supabase.rpc('search_user_by_email', {
+    search_email: email,
+  });
+
+  if (error) throw new Error('Erreur lors de la recherche du compte.');
+  if (!users?.length) throw new Error('Aucun compte trouvé avec cet email.');
+
+  const targetUser = (users as { id: string; email: string; display_name: string | null }[])[0];
+
+  // 2. Vérifier qu'il n'est pas déjà membre
+  const { data: existing } = await supabase
+    .from('group_memberships')
+    .select('user_id')
+    .eq('group_id', groupId)
+    .eq('user_id', targetUser.id)
+    .maybeSingle();
+
+  if (existing) {
+    const name = targetUser.display_name || targetUser.email;
+    throw new Error(`${name} est déjà membre de ce groupe.`);
+  }
+
+  // 3. Insérer dans group_memberships
+  const { error: insertError } = await supabase
+    .from('group_memberships')
+    .insert({ group_id: groupId, user_id: targetUser.id, role: 'member' });
+
+  if (insertError) throw new Error("Erreur lors de l'ajout du membre.");
+
+  return { displayName: targetUser.display_name, email: targetUser.email };
+}
