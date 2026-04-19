@@ -116,7 +116,7 @@ export async function upsertGroup(group: Group, userId: string): Promise<boolean
     );
   if (membershipError) {
     console.error('[groupsApi] upsertGroup (group_memberships):', membershipError.message, { groupId: group.id });
-    // Non bloquant : le groupe existe, le membership peut être réinséré plus tard
+    return false;
   }
 
   return true;
