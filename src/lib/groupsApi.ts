@@ -61,8 +61,9 @@ export async function upsertGroups(
 
   const { error: membershipError } = await supabase
     .from('group_memberships')
-    .upsert(membershipRows, { onConflict: 'group_id,user_id', ignoreDuplicates: true });
-  if (membershipError) {
+    .insert(membershipRows);
+  // 23505 = unique_violation : déjà owner (idempotent), pas une erreur
+  if (membershipError && membershipError.code !== '23505') {
     console.error('[groupsApi] upsertGroups (group_memberships):', membershipError.message);
     // Non bloquant : les groupes sont migrés, on continue
   }
@@ -107,14 +108,13 @@ export async function upsertGroup(group: Group, userId: string): Promise<boolean
     return false;
   }
 
-  // 2. Insérer le créateur comme owner dans group_memberships
+  // 2. Insérer le créateur comme owner dans group_memberships.
+  // On utilise insert (pas upsert) pour éviter les edge-cases PostgREST avec
+  // ON CONFLICT + RLS. L'erreur 23505 (duplicate key) signifie déjà owner → OK.
   const { error: membershipError } = await supabase
     .from('group_memberships')
-    .upsert(
-      { group_id: group.id, user_id: userId, role: 'owner' },
-      { onConflict: 'group_id,user_id', ignoreDuplicates: true }
-    );
-  if (membershipError) {
+    .insert({ group_id: group.id, user_id: userId, role: 'owner' });
+  if (membershipError && membershipError.code !== '23505') {
     console.error('[groupsApi] upsertGroup (group_memberships):', membershipError.message, { groupId: group.id });
     return false;
   }
